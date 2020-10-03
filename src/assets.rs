@@ -89,6 +89,7 @@ pub const SCALE: [&'static str; NOTE_COUNT] = [
 #[derive(Clone)]
 pub struct SoundStorage {
     pub jump: SourceHandle,
+    pub tap: SourceHandle,
     pub foo_scale: Vec<SourceHandle>,
 }
 

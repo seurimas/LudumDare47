@@ -1,4 +1,4 @@
-pub use crate::assets::{AnimationId, PrefabStorage, SoundStorage, SpriteStorage};
+pub use crate::assets::{AnimationId, PrefabStorage, SoundStorage, SpriteStorage, NOTE_COUNT};
 pub use crate::player::Player;
 pub use crate::stage::{Platform, StageState};
 pub use amethyst::{
@@ -69,7 +69,7 @@ pub struct SoundPlayer<'a> {
 }
 
 impl<'a> SoundPlayer<'a> {
-    pub fn play_normal(&self, get_sound: fn(&SoundStorage) -> &SourceHandle) {
+    pub fn play_normal(&self, get_sound: impl Fn(&SoundStorage) -> &SourceHandle) {
         if let Some(ref output) = self.output.as_ref() {
             if let Some(ref sounds) = self.storage.as_ref() {
                 if let Some(sound) = self.sources.get(get_sound(&sounds)) {
@@ -111,3 +111,20 @@ pub fn rand_in<T>(vec: &Vec<T>) -> &T {
     vec.get(thread_rng().gen_range(0, vec.len()))
         .expect("Nothing in vector")
 }
+
+pub fn rand_upto(max: usize) -> usize {
+    thread_rng().gen_range(0, max)
+}
+
+pub const C4: usize = 0;
+pub const D4: usize = 2;
+pub const E4: usize = 4;
+pub const F4: usize = 5;
+pub const G4: usize = 7;
+pub const A4: usize = 9;
+pub const B4: usize = 11;
+pub const C5: usize = 12;
+pub const D5: usize = 14;
+pub const E5: usize = 16;
+pub const F5: usize = 17;
+pub const G5: usize = 19;

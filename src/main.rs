@@ -2,6 +2,7 @@ extern crate nalgebra as na;
 extern crate nalgebra19 as na19;
 mod assets;
 mod hazards;
+mod music;
 mod player;
 mod prelude;
 mod stage;
@@ -181,6 +182,7 @@ impl SimpleState for LoadingState {
         let platform = load_prefab(data.world, "Drops.ron".to_string(), &mut progress_counter);
 
         let jump = load_sound_file(data.world, "hup.wav".to_string(), &mut progress_counter);
+        let tap = load_sound_file(data.world, "tap.wav".to_string(), &mut progress_counter);
 
         let foo_scale = SCALE
             .iter()
@@ -201,7 +203,11 @@ impl SimpleState for LoadingState {
                 platform,
                 player,
             },
-            SoundStorage { jump, foo_scale },
+            SoundStorage {
+                jump,
+                tap,
+                foo_scale,
+            },
         ));
     }
 

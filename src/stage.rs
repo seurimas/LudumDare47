@@ -1,3 +1,4 @@
+use crate::music::*;
 use crate::player::spawn_player_world;
 use crate::prelude::*;
 use amethyst::{
@@ -41,6 +42,7 @@ pub struct StageDescription {
     width: u32,
     height: u32,
     player_spawn: (u32, u32),
+    song: Song,
 }
 
 #[derive(Component, Debug, Copy, Clone)]
@@ -49,17 +51,20 @@ pub struct Platform {
     pub x: u32,
     pub y: u32,
     pub has_player: bool,
+    pub note: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct StageState {
     platforms: HashMap<(u32, u32), Entity>,
+    beat: f32,
 }
 
 impl Default for StageState {
     fn default() -> Self {
         StageState {
             platforms: HashMap::new(),
+            beat: 0.0,
         }
     }
 }
@@ -93,9 +98,10 @@ impl StageState {
 impl Default for StageDescription {
     fn default() -> Self {
         StageDescription {
-            width: 4,
+            width: 5,
             height: 4,
             player_spawn: (0, 0),
+            song: Song::default(),
         }
     }
 }
@@ -132,6 +138,7 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
                         x,
                         y,
                         has_player: false,
+                        note: x + y * 4,
                     })
                     .build();
                 if stage_desc.player_spawn.0 == x && stage_desc.player_spawn.1 == y {
@@ -145,7 +152,10 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
         spawn_player_world(world, Some(player_spawn), translation);
     }
     world.insert::<StageDescription>(stage_desc);
-    world.insert::<StageState>(StageState { platforms });
+    world.insert::<StageState>(StageState {
+        platforms,
+        beat: 0.0,
+    });
 }
 
 struct PlatformAnimationSystem;
@@ -195,8 +205,7 @@ impl<'s> System<'s> for PlatformAnimationSystem {
                 }
             }
             if need_to_react {
-                println!("REACTING");
-                sound.play_normal(|store| rand_in(&store.foo_scale));
+                sound.play_normal(|store| &store.tap);
                 if let (Some(control_set), Some(t_control_set)) = (
                     get_animation_set(&mut control_sets, entity),
                     get_animation_set(&mut t_control_sets, entity),
@@ -224,7 +233,6 @@ impl<'s> System<'s> for PlatformAnimationSystem {
 struct PlatformBeatSystem;
 impl<'s> System<'s> for PlatformBeatSystem {
     type SystemData = (
-        ReadStorage<'s, Player>,
         WriteStorage<'s, Platform>,
         Read<'s, StageDescription>,
         Write<'s, StageState>,
@@ -235,8 +243,20 @@ impl<'s> System<'s> for PlatformBeatSystem {
 
     fn run(
         &mut self,
-        (players, mut platforms, stage_desc, stage_state, time, entities, sound): Self::SystemData,
+        (mut platforms, stage_desc, mut stage_state, time, entities, sound): Self::SystemData,
     ) {
+        let last_beat = stage_state.beat;
+        let song = &stage_desc.song;
+        let new_beat = last_beat + (time.delta_seconds() * (song.bpm as f32) / 60.0);
+        let last_sub_beat = (last_beat * SUBNOTES as f32) as i32;
+        let new_sub_beat = (new_beat * SUBNOTES as f32) as i32;
+        if new_sub_beat > last_sub_beat {
+            for note in song.get_notes_at(new_sub_beat) {
+                sound.play_normal(|store| &store.foo_scale.get(note).expect("Missing note!"));
+            }
+            println!("{}", new_sub_beat);
+        }
+        stage_state.beat = new_beat;
     }
 }
 
