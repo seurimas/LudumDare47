@@ -180,6 +180,19 @@ impl SimpleState for LoadingState {
         let shadows = load_prefab(data.world, "Shadow.ron".to_string(), &mut progress_counter);
         let platform = load_prefab(data.world, "Drops.ron".to_string(), &mut progress_counter);
 
+        let jump = load_sound_file(data.world, "hup.wav".to_string(), &mut progress_counter);
+
+        let foo_scale = SCALE
+            .iter()
+            .map(|note| {
+                load_sound_file(
+                    data.world,
+                    format!("foo/{}.wav", note),
+                    &mut progress_counter,
+                )
+            })
+            .collect::<Vec<SourceHandle>>();
+
         self.progress = Some(progress_counter);
         self.assets = Some((
             SpriteStorage { tiles },
@@ -188,7 +201,7 @@ impl SimpleState for LoadingState {
                 platform,
                 player,
             },
-            SoundStorage {},
+            SoundStorage { jump, foo_scale },
         ));
     }
 
@@ -252,6 +265,7 @@ fn main() -> amethyst::Result<()> {
         .with_bundle(AudioBundle::default())?
         .with_bundle(FpsCounterBundle)?
         .with_bundle(PlayerBundle)?
+        .with_bundle(StageBundle)?
         .with_bundle(HazardsBundle)?
         .with_bundle(UiBundle::<amethyst::input::StringBindings>::new())?
         .with(DebugDrawShapes, "debug_shapes", &[]);

@@ -29,6 +29,14 @@ pub enum PlayerState {
         z: f32,
     },
 }
+impl PlayerState {
+    pub fn is_airborne(&self) -> bool {
+        match self {
+            PlayerState::Jumping { .. } => true,
+            _ => false,
+        }
+    }
+}
 
 #[derive(Component, Debug)]
 #[storage(VecStorage)]
@@ -117,10 +125,11 @@ impl<'s> System<'s> for PlayerJumpingSystem {
         Read<'s, Time>,
         Read<'s, StageState>,
         Entities<'s>,
+        SoundPlayer<'s>,
     );
     fn run(
         &mut self,
-        (mut players, platforms, mut transforms, time, stage, entities): Self::SystemData,
+        (mut players, platforms, mut transforms, time, stage, entities, sound): Self::SystemData,
     ) {
         for (mut player, entity) in (&mut players, &entities).join() {
             match player.state {
@@ -183,6 +192,7 @@ impl<'s> System<'s> for PlayerJumpingSystem {
                                             z: f32::min(start.z, end.z) + 0.1,
                                         };
                                         player.platform = Some(target_platform.clone());
+                                        sound.play_normal(|store| &store.jump);
                                     }
                                 }
                             }

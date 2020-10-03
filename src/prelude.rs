@@ -1,4 +1,5 @@
 pub use crate::assets::{AnimationId, PrefabStorage, SoundStorage, SpriteStorage};
+pub use crate::player::Player;
 pub use crate::stage::{Platform, StageState};
 pub use amethyst::{
     animation::*,
@@ -22,6 +23,7 @@ use amethyst::{
     assets::AssetStorage,
     shred::{ResourceId, SystemData},
 };
+pub use rand::prelude::*;
 
 pub fn get_active_animation(
     control_set: &AnimationControlSet<AnimationId, SpriteRender>,
@@ -67,10 +69,10 @@ pub struct SoundPlayer<'a> {
 }
 
 impl<'a> SoundPlayer<'a> {
-    pub fn play_normal(&self, get_sound: fn(&SoundStorage) -> SourceHandle) {
+    pub fn play_normal(&self, get_sound: fn(&SoundStorage) -> &SourceHandle) {
         if let Some(ref output) = self.output.as_ref() {
             if let Some(ref sounds) = self.storage.as_ref() {
-                if let Some(sound) = self.sources.get(&get_sound(&sounds)) {
+                if let Some(sound) = self.sources.get(get_sound(&sounds)) {
                     output.play_once(sound, 0.75);
                 }
             }
@@ -103,4 +105,9 @@ pub fn tether_at(mover: &mut na19::Vector3<f32>, tether: &na19::Vector3<f32>, le
 pub fn lerp(progress: f32, v1: f32, v2: f32) -> f32 {
     let diff = v2 - v1;
     v1 + (progress * diff)
+}
+
+pub fn rand_in<T>(vec: &Vec<T>) -> &T {
+    vec.get(thread_rng().gen_range(0, vec.len()))
+        .expect("Nothing in vector")
 }

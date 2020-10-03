@@ -48,6 +48,7 @@ pub struct StageDescription {
 pub struct Platform {
     pub x: u32,
     pub y: u32,
+    pub has_player: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -123,7 +124,11 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
                 let map_entity = builder
                     .with(prefabs.platform.clone())
                     .with(transform)
-                    .with(Platform { x, y })
+                    .with(Platform {
+                        x,
+                        y,
+                        has_player: false,
+                    })
                     .build();
                 if stage_desc.player_spawn.0 == x && stage_desc.player_spawn.1 == y {
                     player_spawn_and_loc = Some((map_entity, translation));
@@ -137,4 +142,63 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
     }
     world.insert::<StageDescription>(stage_desc);
     world.insert::<StageState>(StageState { platforms });
+}
+
+struct PlatformAnimationSystem;
+impl<'s> System<'s> for PlatformAnimationSystem {
+    type SystemData = (
+        ReadStorage<'s, Player>,
+        WriteStorage<'s, Platform>,
+        ReadStorage<'s, AnimationSet<AnimationId, SpriteRender>>,
+        WriteStorage<'s, AnimationControlSet<AnimationId, SpriteRender>>,
+        Entities<'s>,
+        SoundPlayer<'s>,
+    );
+
+    fn run(
+        &mut self,
+        (players, mut platforms, animation_sets, mut control_sets, entities, sound): Self::SystemData,
+    ) {
+        for (platform, animation_set, entity) in (&mut platforms, &animation_sets, &entities).join()
+        {
+            let mut need_to_react = false;
+            for (player) in (&players).join() {
+                if !platform.has_player
+                    && player.platform == Some(entity)
+                    && !player.state.is_airborne()
+                {
+                    need_to_react = true;
+                    platform.has_player = true;
+                } else if platform.has_player && player.platform != Some(entity) {
+                    platform.has_player = false;
+                }
+            }
+            if need_to_react {
+                println!("REACTING");
+                sound.play_normal(|store| rand_in(&store.foo_scale));
+                if let Some(control_set) = get_animation_set(&mut control_sets, entity) {
+                    set_active_animation(
+                        control_set,
+                        AnimationId::Move,
+                        &animation_set,
+                        EndControl::Stay,
+                        1.0,
+                    );
+                }
+            }
+        }
+    }
+}
+
+pub struct StageBundle;
+
+impl<'a, 'b> SystemBundle<'a, 'b> for StageBundle {
+    fn build(
+        self,
+        _world: &mut World,
+        dispatcher: &mut DispatcherBuilder<'a, 'b>,
+    ) -> Result<(), Error> {
+        dispatcher.add(PlatformAnimationSystem, "platform_animation", &[]);
+        Ok(())
+    }
 }

@@ -78,8 +78,17 @@ pub struct SpriteStorage {
     pub tiles: SpriteSheetHandle,
 }
 
+pub const NOTE_COUNT: usize = 20;
+pub const SCALE: [&'static str; NOTE_COUNT] = [
+    "c4", "c4s", "d4", "d4s", "e4", "f4", "f4s", "g4", "g4s", "a4", "a4s", "b4", "c5", "c5s", "d5",
+    "d5s", "e5", "f5", "f5s", "g5",
+];
+
 #[derive(Clone)]
-pub struct SoundStorage {}
+pub struct SoundStorage {
+    pub jump: SourceHandle,
+    pub foo_scale: Vec<SourceHandle>,
+}
 
 #[derive(Eq, PartialOrd, PartialEq, Hash, Debug, Copy, Clone, Deserialize, Serialize)]
 pub enum AnimationId {
