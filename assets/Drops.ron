@@ -34,20 +34,19 @@ Prefab(
                             ),
                         )),
                         sprites: [
-                            Grid((
+                            List((
                                     texture_width: 256,
                                     texture_height: 256,
-                                    columns: 4,
-                                    rows: 1,
-                                    cell_size: (32, 32),
-                                    position: (0, 0),
+                                    sprites: [
+                                        (x: 0, y: 32, width: 32, height: 32)
+                                    ],
                             )),
                         ],
-                        name: "player",
+                        name: "drops",
                     ),
                     // SpriteRenderPrefab
                     render: (
-                        sheet: "player",
+                        sheet: "drops",
                         sprite_number: 0,
                     ),
                 ),
@@ -64,22 +63,6 @@ Prefab(
                                         (
                                             input: [0.0, 1.0],
                                             output: [0, 0],
-                                            function: Step,
-                                        )
-                                    ),
-                                ],
-                            )
-                        ),
-                        (
-                            Move,
-                            (
-                                samplers: [
-                                    (
-                                        0,
-                                        SpriteIndex,
-                                        (
-                                            input: [0.0, 0.166666, 0.33333, 0.500, 0.6666, 0.86666],
-                                            output: [0, 1, 2, 3, 2, 1],
                                             function: Step,
                                         )
                                     ),

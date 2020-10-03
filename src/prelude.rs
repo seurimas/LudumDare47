@@ -1,4 +1,5 @@
 pub use crate::assets::{AnimationId, PrefabStorage, SoundStorage, SpriteStorage};
+pub use crate::stage::{Platform, StageState};
 pub use amethyst::{
     animation::*,
     audio::{output::Output, Source, SourceHandle},
@@ -75,4 +76,31 @@ impl<'a> SoundPlayer<'a> {
             }
         }
     }
+}
+
+pub fn distance_2d_iso(va: &na19::Vector3<f32>, vb: &na19::Vector3<f32>) -> f32 {
+    let dx = (va.x - vb.x) / 2.0;
+    let dy = va.y - vb.y;
+    f32::sqrt((dx * dx) + (dy * dy))
+}
+
+pub fn normalize_iso(direction: &mut na19::Vector3<f32>) {
+    direction.x *= 0.5;
+    *direction = direction.normalize();
+    direction.x *= 2.0;
+}
+
+pub fn tether_at(mover: &mut na19::Vector3<f32>, tether: &na19::Vector3<f32>, length: f32) {
+    let distance = distance_2d_iso(mover, tether);
+    if distance > length {
+        let mut direction = (*mover - *tether);
+        normalize_iso(&mut direction);
+        mover.x = tether.x + (direction.x * length);
+        mover.y = tether.y + (direction.y * length);
+    }
+}
+
+pub fn lerp(progress: f32, v1: f32, v2: f32) -> f32 {
+    let diff = v2 - v1;
+    v1 + (progress * diff)
 }

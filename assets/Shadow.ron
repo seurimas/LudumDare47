@@ -6,7 +6,7 @@
 */
 
 /*
-PLAYER
+Shadow Drop
 */
 Prefab(
     entities: [
@@ -39,15 +39,15 @@ Prefab(
                                     texture_height: 256,
                                     columns: 4,
                                     rows: 1,
-                                    cell_size: (32, 32),
-                                    position: (0, 0),
+                                    cell_size: (16, 16),
+                                    position: (64, 64),
                             )),
                         ],
-                        name: "player",
+                        name: "shadows",
                     ),
                     // SpriteRenderPrefab
                     render: (
-                        sheet: "player",
+                        sheet: "shadows",
                         sprite_number: 0,
                     ),
                 ),
@@ -62,24 +62,8 @@ Prefab(
                                         0,
                                         SpriteIndex,
                                         (
-                                            input: [0.0, 1.0],
-                                            output: [0, 0],
-                                            function: Step,
-                                        )
-                                    ),
-                                ],
-                            )
-                        ),
-                        (
-                            Move,
-                            (
-                                samplers: [
-                                    (
-                                        0,
-                                        SpriteIndex,
-                                        (
-                                            input: [0.0, 0.166666, 0.33333, 0.500, 0.6666, 0.86666],
-                                            output: [0, 1, 2, 3, 2, 1],
+                                            input: [0.0, 0.5, 0.75, 1.0],
+                                            output: [0, 1, 2, 3],
                                             function: Step,
                                         )
                                     ),

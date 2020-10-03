@@ -83,16 +83,6 @@ impl SimpleState for GameplayState {
 
         let dimensions = (*data.world.read_resource::<ScreenDimensions>()).clone();
 
-        spawn_player_world(
-            &mut data.world,
-            dimensions.width() * 0.5,
-            dimensions.height() * 0.5,
-        );
-        spawn_spikes_world(
-            &mut data.world,
-            dimensions.width() * 0.5 + 100.0,
-            dimensions.height() * 0.5 + 100.0,
-        );
         initialize_camera(&mut data.world, &dimensions);
         initialize_stage(&mut data.world, self.stage_desc.clone());
     }
@@ -187,12 +177,17 @@ impl SimpleState for LoadingState {
         let tiles = load_spritesheet(data.world, "Tiles".to_string(), &mut progress_counter);
 
         let player = load_prefab(data.world, "Player.ron".to_string(), &mut progress_counter);
-        let spikes = load_prefab(data.world, "Spikes.ron".to_string(), &mut progress_counter);
+        let shadows = load_prefab(data.world, "Shadow.ron".to_string(), &mut progress_counter);
+        let platform = load_prefab(data.world, "Drops.ron".to_string(), &mut progress_counter);
 
         self.progress = Some(progress_counter);
         self.assets = Some((
             SpriteStorage { tiles },
-            PrefabStorage { spikes, player },
+            PrefabStorage {
+                shadows,
+                platform,
+                player,
+            },
             SoundStorage {},
         ));
     }
@@ -250,7 +245,6 @@ fn main() -> amethyst::Result<()> {
                         .with_clear([0.0, 0.0, 0.0, 1.0]),
                 )
                 .with_plugin(RenderFlat2D::default())
-                .with_plugin(RenderTiles2D::<StageFloor, MortonEncoder>::default())
                 .with_plugin(RenderDebugLines::default())
                 .with_plugin(RenderUi::default())
                 .with_plugin(RenderImgui::<amethyst::input::StringBindings>::default()),

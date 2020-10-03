@@ -35,7 +35,8 @@ pub fn load_prefab<'a>(
 #[derive(Clone)]
 pub struct PrefabStorage {
     pub player: Handle<Prefab<SpriteEntityPrefabData>>,
-    pub spikes: Handle<Prefab<SpriteEntityPrefabData>>,
+    pub shadows: Handle<Prefab<SpriteEntityPrefabData>>,
+    pub platform: Handle<Prefab<SpriteEntityPrefabData>>,
 }
 
 pub fn load_sound_file<'a>(

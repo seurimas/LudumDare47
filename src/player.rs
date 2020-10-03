@@ -15,45 +15,69 @@ use amethyst::{
 #[derive(Debug, PartialEq)]
 pub enum PlayerState {
     Idle,
-    Moving,
-    Shielding,
+    Moving {
+        jump_impulse: f32,
+        tx: f32,
+        ty: f32,
+    },
+    Jumping {
+        progress: f32,
+        x1: f32,
+        y1: f32,
+        x2: f32,
+        y2: f32,
+        z: f32,
+    },
 }
 
 #[derive(Component, Debug)]
 #[storage(VecStorage)]
 pub struct Player {
     pub move_speed: f32,
+    pub jump_speed: f32,
     pub state: PlayerState,
+    pub platform: Option<Entity>,
+    pub on_edge: bool,
 }
 
 fn spawn_player(
     prefabs: &PrefabStorage,
     sprites: &SpriteStorage,
     player_builder: LazyBuilder,
-    x: f32,
-    y: f32,
+    platform: Option<Entity>,
+    platform_transform: na19::Vector3<f32>,
 ) -> Entity {
     let mut transform = Transform::default();
-    transform.set_translation_xyz(x, y, 0.2);
-    println!("{} {}", x, y);
+    transform.set_translation_xyz(
+        platform_transform.x,
+        platform_transform.y,
+        platform_transform.y + 0.1,
+    );
     player_builder
         .with(prefabs.player.clone())
         .with(transform)
         .with(Player {
-            move_speed: 256.0,
+            move_speed: 64.0,
+            jump_speed: 2.0,
             state: PlayerState::Idle,
+            platform: platform,
+            on_edge: false,
         })
         .named("player")
         .build()
 }
 
-pub fn spawn_player_world(world: &mut World, x: f32, y: f32) -> Entity {
+pub fn spawn_player_world(
+    world: &mut World,
+    platform: Option<Entity>,
+    platform_transform: na19::Vector3<f32>,
+) -> Entity {
     let entities = world.entities();
     let update = world.write_resource::<LazyUpdate>();
     let builder = update.create_entity(&entities);
     let prefabs = world.read_resource::<PrefabStorage>();
     let sprites = world.read_resource::<SpriteStorage>();
-    let player = spawn_player(&prefabs, &sprites, builder, x, y);
+    let player = spawn_player(&prefabs, &sprites, builder, platform, platform_transform);
     let builder = update.create_entity(&entities);
     player
 }
@@ -84,6 +108,127 @@ impl<'s> System<'s> for PlayerAnimationSystem {
     }
 }
 
+struct PlayerJumpingSystem;
+impl<'s> System<'s> for PlayerJumpingSystem {
+    type SystemData = (
+        WriteStorage<'s, Player>,
+        ReadStorage<'s, Platform>,
+        WriteStorage<'s, Transform>,
+        Read<'s, Time>,
+        Read<'s, StageState>,
+        Entities<'s>,
+    );
+    fn run(
+        &mut self,
+        (mut players, platforms, mut transforms, time, stage, entities): Self::SystemData,
+    ) {
+        for (mut player, entity) in (&mut players, &entities).join() {
+            match player.state {
+                PlayerState::Idle => {}
+                PlayerState::Jumping {
+                    progress,
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    z,
+                } => {
+                    if let Some(mut player_loc) = transforms.get_mut(entity) {
+                        player_loc.set_translation_xyz(
+                            lerp(progress, x1, x2),
+                            lerp(progress, y1, y2),
+                            z,
+                        );
+                        let new_progress = progress + (time.delta_seconds() * player.jump_speed);
+                        if new_progress > 1.0 {
+                            player.state = PlayerState::Idle;
+                        } else {
+                            player.state = PlayerState::Jumping {
+                                progress: new_progress,
+                                x1,
+                                x2,
+                                y1,
+                                y2,
+                                z,
+                            };
+                        }
+                    }
+                }
+                PlayerState::Moving {
+                    jump_impulse,
+                    tx,
+                    ty,
+                } => {
+                    if player.on_edge && jump_impulse > 0.2 {
+                        if let Some(start) = transforms
+                            .get(entity)
+                            .map(|transform| transform.translation().clone())
+                        {
+                            if let Some(platform) =
+                                player.platform.and_then(|entity| platforms.get(entity))
+                            {
+                                if let Some(target_platform) =
+                                    stage.target_platform(*platform, tx, ty)
+                                {
+                                    if let Some(end) = transforms
+                                        .get(*target_platform)
+                                        .map(|transform| transform.translation().clone())
+                                    {
+                                        player.state = PlayerState::Jumping {
+                                            progress: 0.0,
+                                            x1: start.x,
+                                            x2: end.x,
+                                            y1: start.y,
+                                            y2: end.y,
+                                            z: f32::min(start.z, end.z) + 0.1,
+                                        };
+                                        player.platform = Some(target_platform.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct PlayerPlatformingSystem;
+impl<'s> System<'s> for PlayerPlatformingSystem {
+    type SystemData = (
+        WriteStorage<'s, Player>,
+        WriteStorage<'s, Transform>,
+        Entities<'s>,
+    );
+    fn run(&mut self, (mut players, mut transforms, entities): Self::SystemData) {
+        if let Some((player, platform)) = {
+            let mut ret = None;
+            for (player, entity) in (&players, &entities).join() {
+                if let Some(platform) = player.platform {
+                    ret = Some((entity, platform));
+                }
+            }
+            ret
+        } {
+            if let Some(platform_loc) = transforms
+                .get(platform)
+                .map(|transform| transform.translation().clone())
+            {
+                if let Some(player_transform) = transforms.get_mut(player) {
+                    let translation = player_transform.translation_mut();
+                    tether_at(translation, &platform_loc, 4.0);
+                    if distance_2d_iso(translation, &platform_loc) > 3.0 {
+                        if let Some(mut player) = players.get_mut(player) {
+                            player.on_edge = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct PlayerMovementSystem;
 impl<'s> System<'s> for PlayerMovementSystem {
     type SystemData = (
@@ -99,13 +244,28 @@ impl<'s> System<'s> for PlayerMovementSystem {
         if let (Some(x_tilt), Some(y_tilt)) = (x_tilt, y_tilt) {
             for (mut player, mut transform) in (&mut player, &mut transforms).join() {
                 match player.state {
-                    PlayerState::Shielding => {}
+                    PlayerState::Jumping { .. } => {}
                     _ => {
                         let mut translation = transform.translation_mut();
                         translation.x += x_tilt * player.move_speed * time.delta_seconds();
                         translation.y += y_tilt * player.move_speed * time.delta_seconds();
                         if f32::abs(x_tilt) > 0.0 || f32::abs(y_tilt) > 0.0 {
-                            player.state = PlayerState::Moving;
+                            let (mut jump_impulse, old_tx, old_ty) = match player.state {
+                                PlayerState::Moving {
+                                    jump_impulse,
+                                    tx,
+                                    ty,
+                                } => (jump_impulse, tx, ty),
+                                _ => (0.0, 0.0, 0.0),
+                            };
+                            if f32::abs(x_tilt) > 0.0 && f32::abs(y_tilt) > 0.0 {
+                                jump_impulse = 0.0;
+                            }
+                            player.state = PlayerState::Moving {
+                                jump_impulse: jump_impulse + time.delta_seconds(),
+                                tx: x_tilt,
+                                ty: y_tilt,
+                            };
                         } else {
                             player.state = PlayerState::Idle;
                         }
@@ -126,6 +286,16 @@ impl<'a, 'b> SystemBundle<'a, 'b> for PlayerBundle {
     ) -> Result<(), Error> {
         dispatcher.add(PlayerAnimationSystem, "player_animation", &[]);
         dispatcher.add(PlayerMovementSystem, "player_movement", &[]);
+        dispatcher.add(
+            PlayerPlatformingSystem,
+            "player_platforming",
+            &["player_movement"],
+        );
+        dispatcher.add(
+            PlayerJumpingSystem,
+            "player_jumping",
+            &["player_platforming"],
+        );
         Ok(())
     }
 }

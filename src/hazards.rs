@@ -34,7 +34,7 @@ fn spawn_spikes(
     let mut transform = Transform::default();
     transform.set_translation_xyz(x, y, 0.0);
     player_builder
-        .with(prefabs.spikes.clone())
+        //.with(prefabs.spikes.clone())
         .with(transform)
         .with(Hazard {
             hazard_type: HazardType::Spikes,
