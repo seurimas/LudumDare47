@@ -1,4 +1,4 @@
-pub use crate::assets::{AnimationId, SoundStorage};
+pub use crate::assets::{AnimationId, PrefabStorage, SoundStorage, SpriteStorage};
 pub use amethyst::{
     animation::*,
     audio::{output::Output, Source, SourceHandle},

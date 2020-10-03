@@ -6,7 +6,6 @@ use amethyst::{
     derive::PrefabData,
     ecs::*,
     error::Error,
-    prelude::*,
     renderer::{
         sprite::{prefab::SpriteScenePrefab, SpriteSheetHandle},
         types::Texture,
@@ -75,7 +74,7 @@ pub fn load_spritesheet<'a>(
 
 #[derive(Clone)]
 pub struct SpriteStorage {
-    pub ball: SpriteSheetHandle,
+    pub tiles: SpriteSheetHandle,
 }
 
 #[derive(Clone)]

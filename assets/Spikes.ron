@@ -37,9 +37,9 @@ Prefab(
                             Grid((
                                     texture_width: 256,
                                     texture_height: 256,
-                                    columns: 5,
+                                    columns: 8,
                                     rows: 1,
-                                    cell_size: (32, 32),
+                                    cell_size: (8, 10),
                                     position: (0, 64),
                             )),
                         ],
@@ -78,8 +78,8 @@ Prefab(
                                         0,
                                         SpriteIndex,
                                         (
-                                            input: [0.0, 0.6, 0.7, 0.85, 1.0],
-                                            output: [0, 1, 2, 3, 4],
+                                            input: [0.0, 0.1428, 0.2857, 0.4285, 0.5714, 0.7142, 0.8571, 1.0],
+                                            output: [0, 1, 2, 3, 4, 5, 6, 7],
                                             function: Step,
                                         )
                                     ),

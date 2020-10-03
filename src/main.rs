@@ -72,6 +72,7 @@ impl<'s> amethyst::ecs::System<'s> for ImguiDebugSystem {
 
 struct GameplayState {
     assets: GameAssets,
+    stage_desc: StageDescription,
 }
 impl SimpleState for GameplayState {
     fn on_start(&mut self, mut data: StateData<'_, GameData<'_, '_>>) {
@@ -93,6 +94,7 @@ impl SimpleState for GameplayState {
             dimensions.height() * 0.5 + 100.0,
         );
         initialize_camera(&mut data.world, &dimensions);
+        initialize_stage(&mut data.world, self.stage_desc.clone());
     }
 
     fn update(&mut self, data: &mut StateData<'_, GameData<'_, '_>>) -> SimpleTrans {
@@ -150,6 +152,7 @@ impl SimpleState for MenuState {
                         if start == ui_event.target {
                             return Trans::Push(Box::new(GameplayState {
                                 assets: self.assets.clone(),
+                                stage_desc: StageDescription::default(),
                             }));
                         }
                     }
@@ -181,14 +184,14 @@ impl SimpleState for LoadingState {
         init_output(data.world);
         let mut progress_counter = ProgressCounter::new();
 
-        let ball = load_spritesheet(data.world, "Ball".to_string(), &mut progress_counter);
+        let tiles = load_spritesheet(data.world, "Tiles".to_string(), &mut progress_counter);
 
         let player = load_prefab(data.world, "Player.ron".to_string(), &mut progress_counter);
         let spikes = load_prefab(data.world, "Spikes.ron".to_string(), &mut progress_counter);
 
         self.progress = Some(progress_counter);
         self.assets = Some((
-            SpriteStorage { ball },
+            SpriteStorage { tiles },
             PrefabStorage { spikes, player },
             SoundStorage {},
         ));
@@ -202,6 +205,7 @@ impl SimpleState for LoadingState {
             }
             if progress.is_complete() {
                 return SimpleTrans::Switch(Box::new(GameplayState {
+                    stage_desc: StageDescription::default(),
                     assets: self.assets.clone().unwrap(),
                 }));
                 /*return SimpleTrans::Switch(Box::new(MenuState {
@@ -246,9 +250,10 @@ fn main() -> amethyst::Result<()> {
                         .with_clear([0.0, 0.0, 0.0, 1.0]),
                 )
                 .with_plugin(RenderFlat2D::default())
-                //.with_plugin(RenderTiles2D::<WorldTile, MortonEncoder>::default())
+                .with_plugin(RenderTiles2D::<StageFloor, MortonEncoder>::default())
                 .with_plugin(RenderDebugLines::default())
-                .with_plugin(RenderUi::default()), //.with_plugin(RenderImgui::<amethyst::input::StringBindings>::default()),
+                .with_plugin(RenderUi::default())
+                .with_plugin(RenderImgui::<amethyst::input::StringBindings>::default()),
         )?
         .with_bundle(AudioBundle::default())?
         .with_bundle(FpsCounterBundle)?

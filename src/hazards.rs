@@ -15,6 +15,15 @@ pub struct Hazard {
     activated: bool,
 }
 
+impl Hazard {
+    pub fn activation_speed(&self) -> f32 {
+        match self.hazard_type {
+            HazardType::Spikes => 4.0,
+            HazardType::Laser => 4.0,
+        }
+    }
+}
+
 fn spawn_spikes(
     prefabs: &PrefabStorage,
     sprites: &SpriteStorage,
@@ -79,7 +88,7 @@ impl<'s> System<'s> for HazardAnimationSystem {
                     AnimationId::Move,
                     &animation_set,
                     EndControl::Stay,
-                    2.,
+                    hazard.activation_speed(),
                 );
             }
         }
