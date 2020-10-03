@@ -121,6 +121,7 @@ impl<'s> System<'s> for PlayerJumpingSystem {
     type SystemData = (
         WriteStorage<'s, Player>,
         ReadStorage<'s, Platform>,
+        ReadStorage<'s, Parent>,
         WriteStorage<'s, Transform>,
         Read<'s, Time>,
         Read<'s, StageState>,
@@ -129,7 +130,7 @@ impl<'s> System<'s> for PlayerJumpingSystem {
     );
     fn run(
         &mut self,
-        (mut players, platforms, mut transforms, time, stage, entities, sound): Self::SystemData,
+        (mut players, platforms, parents, mut transforms, time, stage, entities, sound): Self::SystemData,
     ) {
         for (mut player, entity) in (&mut players, &entities).join() {
             match player.state {
@@ -176,11 +177,16 @@ impl<'s> System<'s> for PlayerJumpingSystem {
                             if let Some(platform) =
                                 player.platform.and_then(|entity| platforms.get(entity))
                             {
-                                if let Some(target_platform) =
-                                    stage.target_platform(*platform, tx, ty)
+                                if let Some((target_platform, target_parent)) = stage
+                                    .target_platform(*platform, tx, ty)
+                                    .and_then(|platform_entity| {
+                                        parents
+                                            .get(*platform_entity)
+                                            .map(|parent| (platform_entity, parent))
+                                    })
                                 {
                                     if let Some(end) = transforms
-                                        .get(*target_platform)
+                                        .get(target_parent.entity)
                                         .map(|transform| transform.translation().clone())
                                     {
                                         player.state = PlayerState::Jumping {
@@ -208,14 +214,18 @@ struct PlayerPlatformingSystem;
 impl<'s> System<'s> for PlayerPlatformingSystem {
     type SystemData = (
         WriteStorage<'s, Player>,
+        ReadStorage<'s, Parent>,
         WriteStorage<'s, Transform>,
         Entities<'s>,
     );
-    fn run(&mut self, (mut players, mut transforms, entities): Self::SystemData) {
+    fn run(&mut self, (mut players, parents, mut transforms, entities): Self::SystemData) {
         if let Some((player, platform)) = {
             let mut ret = None;
             for (player, entity) in (&players, &entities).join() {
-                if let Some(platform) = player.platform {
+                if let Some(platform) = player
+                    .platform
+                    .and_then(|platform| parents.get(platform).map(|parent| parent.entity))
+                {
                     ret = Some((entity, platform));
                 }
             }

@@ -13,6 +13,7 @@ Prefab(
         PrefabEntity(
             data: SpriteEntityPrefabData(
                 sprite_scene: (
+                    transform: (),
                     sheet: Sheet(
                         texture: File("Master.png", (
                             "IMAGE", (
@@ -88,6 +89,54 @@ Prefab(
                                 ],
                             )
                         ),
+                    ],
+                ),
+                transform_animation_set: (
+                    animations: [
+                        (
+                            Move,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        Rotation,
+                                        (
+                                            input: [0.0, 0.05, 0.1, 0.15, 0.2],
+                                            output: [
+                                                Vec4((0., 0., 0., 1.)),
+                                                Vec4((0., 0., -0.1, 1.)),
+                                                Vec4((0., 0., 0., 1.)),
+                                                Vec4((0., 0., 0.1, 1.)),
+                                                Vec4((0., 0., 0., 1.)),
+                                            ],
+                                            function: SphericalLinear,
+                                        )
+                                    )
+                                ],
+                            )
+                        ),
+                        (
+                            Beat,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        Rotation,
+                                        (
+                                            input: [0.0, 0.05, 0.1, 0.15, 0.2],
+                                            output: [
+                                                Vec4((0., 0., 0., 1.)),
+                                                Vec4((0., 0., -0.1, 1.)),
+                                                Vec4((0., 0., 0., 1.)),
+                                                Vec4((0., 0., 0.1, 1.)),
+                                                Vec4((0., 0., 0., 1.)),
+                                            ],
+                                            function: SphericalLinear,
+                                        )
+                                    )
+                                ],
+                            )
+                        )
                     ],
                 ),
             ),

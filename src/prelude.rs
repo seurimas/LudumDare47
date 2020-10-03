@@ -36,10 +36,10 @@ pub fn get_active_animation(
     None
 }
 
-pub fn set_active_animation(
-    control_set: &mut AnimationControlSet<AnimationId, SpriteRender>,
+pub fn set_active_animation<T: amethyst::animation::AnimationSampling>(
+    control_set: &mut AnimationControlSet<AnimationId, T>,
     id: AnimationId,
-    animation_set: &AnimationSet<AnimationId, SpriteRender>,
+    animation_set: &AnimationSet<AnimationId, T>,
     end: EndControl,
     rate_multiplier: f32,
 ) {

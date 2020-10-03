@@ -121,9 +121,13 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
                 );
                 let builder = update.create_entity(&entities);
                 let translation = transform.translation().clone();
-                let map_entity = builder
+                let parent_entity = builder.with(transform).build();
+                let builder = update.create_entity(&entities);
+                let sprite_entity = builder
                     .with(prefabs.platform.clone())
-                    .with(transform)
+                    .with(Parent {
+                        entity: parent_entity,
+                    })
                     .with(Platform {
                         x,
                         y,
@@ -131,9 +135,9 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
                     })
                     .build();
                 if stage_desc.player_spawn.0 == x && stage_desc.player_spawn.1 == y {
-                    player_spawn_and_loc = Some((map_entity, translation));
+                    player_spawn_and_loc = Some((sprite_entity, translation));
                 }
-                platforms.insert((x, y), map_entity);
+                platforms.insert((x, y), sprite_entity);
             }
         }
         player_spawn_and_loc
@@ -151,15 +155,32 @@ impl<'s> System<'s> for PlatformAnimationSystem {
         WriteStorage<'s, Platform>,
         ReadStorage<'s, AnimationSet<AnimationId, SpriteRender>>,
         WriteStorage<'s, AnimationControlSet<AnimationId, SpriteRender>>,
+        ReadStorage<'s, AnimationSet<AnimationId, Transform>>,
+        WriteStorage<'s, AnimationControlSet<AnimationId, Transform>>,
         Entities<'s>,
         SoundPlayer<'s>,
     );
 
     fn run(
         &mut self,
-        (players, mut platforms, animation_sets, mut control_sets, entities, sound): Self::SystemData,
+        (
+            players,
+            mut platforms,
+            animation_sets,
+            mut control_sets,
+            t_animation_sets,
+            mut t_control_sets,
+            entities,
+            sound,
+        ): Self::SystemData,
     ) {
-        for (platform, animation_set, entity) in (&mut platforms, &animation_sets, &entities).join()
+        for (platform, animation_set, t_animation_set, entity) in (
+            &mut platforms,
+            &animation_sets,
+            &t_animation_sets,
+            &entities,
+        )
+            .join()
         {
             let mut need_to_react = false;
             for (player) in (&players).join() {
@@ -176,7 +197,10 @@ impl<'s> System<'s> for PlatformAnimationSystem {
             if need_to_react {
                 println!("REACTING");
                 sound.play_normal(|store| rand_in(&store.foo_scale));
-                if let Some(control_set) = get_animation_set(&mut control_sets, entity) {
+                if let (Some(control_set), Some(t_control_set)) = (
+                    get_animation_set(&mut control_sets, entity),
+                    get_animation_set(&mut t_control_sets, entity),
+                ) {
                     set_active_animation(
                         control_set,
                         AnimationId::Move,
@@ -184,9 +208,35 @@ impl<'s> System<'s> for PlatformAnimationSystem {
                         EndControl::Stay,
                         1.0,
                     );
+                    set_active_animation(
+                        t_control_set,
+                        AnimationId::Move,
+                        &t_animation_set,
+                        EndControl::Stay,
+                        1.0,
+                    );
                 }
             }
         }
+    }
+}
+
+struct PlatformBeatSystem;
+impl<'s> System<'s> for PlatformBeatSystem {
+    type SystemData = (
+        ReadStorage<'s, Player>,
+        WriteStorage<'s, Platform>,
+        Read<'s, StageDescription>,
+        Write<'s, StageState>,
+        Read<'s, Time>,
+        Entities<'s>,
+        SoundPlayer<'s>,
+    );
+
+    fn run(
+        &mut self,
+        (players, mut platforms, stage_desc, stage_state, time, entities, sound): Self::SystemData,
+    ) {
     }
 }
 
@@ -199,6 +249,7 @@ impl<'a, 'b> SystemBundle<'a, 'b> for StageBundle {
         dispatcher: &mut DispatcherBuilder<'a, 'b>,
     ) -> Result<(), Error> {
         dispatcher.add(PlatformAnimationSystem, "platform_animation", &[]);
+        dispatcher.add(PlatformBeatSystem, "platform_beat", &[]);
         Ok(())
     }
 }

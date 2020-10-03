@@ -3,6 +3,7 @@ use amethyst::{
     animation::*,
     assets::*,
     audio::{SourceHandle, WavFormat},
+    core::Transform,
     derive::PrefabData,
     ecs::*,
     error::Error,
@@ -18,8 +19,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, PrefabData)]
 pub struct SpriteEntityPrefabData {
-    sprite_scene: SpriteScenePrefab,
-    animation_set: AnimationSetPrefab<AnimationId, SpriteRender>,
+    sprite_scene: Option<SpriteScenePrefab>,
+    animation_set: Option<AnimationSetPrefab<AnimationId, SpriteRender>>,
+    transform_animation_set: Option<AnimationSetPrefab<AnimationId, Transform>>,
 }
 
 pub fn load_prefab<'a>(
@@ -95,7 +97,7 @@ pub enum AnimationId {
     //    Spawn,
     Idle,
     Move,
-    //    Beat,
+    Beat,
     //    Die,
     //    Hit,
     //    Kill,

@@ -241,6 +241,10 @@ fn main() -> amethyst::Result<()> {
             "scene_loader",
             &[],
         )
+        .with_bundle(AnimationBundle::<AnimationId, Transform>::new(
+            "animation_control_system",
+            "sampler_interpolation_system",
+        ))?
         .with_bundle(AnimationBundle::<AnimationId, SpriteRender>::new(
             "sprite_animation_control",
             "sprite_sampler_interpolation",
