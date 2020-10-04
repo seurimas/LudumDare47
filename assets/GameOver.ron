@@ -1,0 +1,90 @@
+#![enable(implicit_some)]
+/*!
+    @import /amethyst_assets/src/prefab/mod.rs#Prefab
+    @import ../src/assets.rs#SpriteEntityPrefabData
+    Prefab<SpriteEntityPrefabData>
+*/
+
+/*
+    Game Over Sign
+*/
+Prefab(
+    entities: [
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    transform: (),
+                    sheet: Sheet(
+                        texture: File("Master.png", (
+                            "IMAGE", (
+                                sampler_info: (
+                                    min_filter: Nearest,
+                                    mag_filter: Nearest,
+                                    mip_filter: Nearest,
+                                    wrap_mode: (Tile, Tile, Tile),
+                                    lod_bias: (0),
+                                    lod_range: (
+                                        start: ( 0 ),
+                                        end: ( 8000 ),
+                                    ),
+                                    comparison: None,
+                                    border: (0),
+                                    anisotropic: Off,
+				                    normalized: true,
+                                ),
+                            ),
+                        )),
+                        sprites: [
+                            List((
+                                    texture_width: 256,
+                                    texture_height: 256,
+                                    sprites: [
+                                        (x: 64, y: 176, width: 32, height: 32),
+                                        (x: 96, y: 176, width: 32, height: 32),
+                                        (x: 128, y: 176, width: 32, height: 32),
+                                        (x: 160, y: 176, width: 32, height: 32),
+                                        (x: 64, y: 208, width: 32, height: 32),
+                                        (x: 96, y: 208, width: 32, height: 32),
+                                        (x: 128, y: 208, width: 32, height: 32),
+                                        (x: 160, y: 208, width: 32, height: 32),
+                                    ],
+                            )),
+                        ],
+                        name: "gameover",
+                    ),
+                    // SpriteRenderPrefab
+                    render: (
+                        sheet: "gameover",
+                        sprite_number: 0,
+                    ),
+                ),
+                transform_animation_set: (
+                    animations: [
+                        (
+                            Move,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        Rotation,
+                                        (
+                                            input: [0.0, 0.25, 0.5, 0.75, 1.0],
+                                            output: [
+                                                Vec4((0., 0., 0., 1.)),
+                                                Vec4((0., 0., -0.1, 1.)),
+                                                Vec4((0., 0., 0., 1.)),
+                                                Vec4((0., 0., 0.1, 1.)),
+                                                Vec4((0., 0., 0., 1.)),
+                                            ],
+                                            function: SphericalLinear,
+                                        )
+                                    )
+                                ],
+                            )
+                        ),
+                    ],
+                ),
+            ),
+        ),
+    ],
+)

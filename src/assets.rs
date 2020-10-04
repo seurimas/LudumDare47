@@ -101,11 +101,11 @@ pub struct SoundStorage {
 
 #[derive(Eq, PartialOrd, PartialEq, Hash, Debug, Copy, Clone, Deserialize, Serialize)]
 pub enum AnimationId {
-    //    Spawn,
+    Spawn,
     Idle,
     Move,
     Beat,
-    //    Die,
+    Die,
     //    Hit,
     //    Kill,
 }

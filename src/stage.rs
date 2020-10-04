@@ -51,6 +51,7 @@ pub struct Platform {
     pub y: u32,
     pub has_player: bool,
     pub note: Note,
+    pub dead: bool,
 }
 
 #[derive(Component, Debug, Copy, Clone)]
@@ -101,6 +102,7 @@ pub struct StageState {
     missed: i32,
     pub notes_found: Vec<Note>,
     pub winning: bool,
+    pub losing: bool,
     song: Song,
 }
 
@@ -112,6 +114,7 @@ impl Default for StageState {
             missed: 0,
             notes_found: Vec::new(),
             winning: false,
+            losing: false,
             song: Song::alouette(),
         }
     }
@@ -148,6 +151,13 @@ impl StageState {
         self.missed = 0;
         self.notes_found = Vec::new();
         self.winning = true;
+    }
+
+    pub fn lose(&mut self) {
+        self.song = Song::lose_song();
+        self.time_in_song = -0.5;
+        self.missed = 3;
+        self.losing = true;
     }
 }
 
@@ -242,6 +252,7 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
                         x,
                         y,
                         has_player: false,
+                        dead: true,
                         note: note_at(x, y) as Note,
                     })
                     .build();
@@ -262,6 +273,7 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
         missed: 0,
         notes_found: Vec::new(),
         winning: false,
+        losing: false,
         song: Song::alouette(),
     });
 }
@@ -325,15 +337,57 @@ impl<'s> System<'s> for PlatformAnimationSystem {
                     ball.hit = true;
                 }
             }
+            if !stage_state.losing && platform.dead {
+                platform.dead = false;
+                if let (Some(control_set), Some(t_control_set)) = (
+                    get_animation_set(&mut control_sets, entity),
+                    get_animation_set(&mut t_control_sets, entity),
+                ) {
+                    set_active_animation(
+                        control_set,
+                        AnimationId::Spawn,
+                        &animation_set,
+                        EndControl::Stay,
+                        1.0,
+                    );
+                    set_active_animation(
+                        t_control_set,
+                        AnimationId::Spawn,
+                        &t_animation_set,
+                        EndControl::Stay,
+                        1.0,
+                    );
+                }
+            }
             if need_to_wobble || need_to_play {
                 if need_to_wobble {
                     sound.play_normal(|store| &store.tap);
-                } else if platform.has_player {
+                } else if platform.has_player && !stage_state.winning && !stage_state.losing {
                     sound.play_normal(|store| &store.miss);
-                    if !stage_state.winning {
-                        stage_state.missed += 1;
-                    }
+                    stage_state.missed += 1;
                 } else {
+                    if stage_state.losing {
+                        platform.dead = true;
+                        if let (Some(control_set), Some(t_control_set)) = (
+                            get_animation_set(&mut control_sets, entity),
+                            get_animation_set(&mut t_control_sets, entity),
+                        ) {
+                            set_active_animation(
+                                control_set,
+                                AnimationId::Die,
+                                &animation_set,
+                                EndControl::Loop(None),
+                                1.0,
+                            );
+                            set_active_animation(
+                                t_control_set,
+                                AnimationId::Die,
+                                &t_animation_set,
+                                EndControl::Stay,
+                                1.0,
+                            );
+                        }
+                    }
                     sound.play_normal(|store| {
                         store
                             .foo_scale
@@ -341,24 +395,26 @@ impl<'s> System<'s> for PlatformAnimationSystem {
                             .expect("Missing note")
                     });
                 }
-                if let (Some(control_set), Some(t_control_set)) = (
-                    get_animation_set(&mut control_sets, entity),
-                    get_animation_set(&mut t_control_sets, entity),
-                ) {
-                    set_active_animation(
-                        control_set,
-                        AnimationId::Move,
-                        &animation_set,
-                        EndControl::Stay,
-                        1.0,
-                    );
-                    set_active_animation(
-                        t_control_set,
-                        AnimationId::Move,
-                        &t_animation_set,
-                        EndControl::Stay,
-                        1.0,
-                    );
+                if !stage_state.losing {
+                    if let (Some(control_set), Some(t_control_set)) = (
+                        get_animation_set(&mut control_sets, entity),
+                        get_animation_set(&mut t_control_sets, entity),
+                    ) {
+                        set_active_animation(
+                            control_set,
+                            AnimationId::Move,
+                            &animation_set,
+                            EndControl::Stay,
+                            1.0,
+                        );
+                        set_active_animation(
+                            t_control_set,
+                            AnimationId::Move,
+                            &t_animation_set,
+                            EndControl::Stay,
+                            1.0,
+                        );
+                    }
                 }
             }
         }
@@ -552,11 +608,13 @@ impl<'a, 'b> SystemBundle<'a, 'b> for StageBundle {
 
 struct PlayerWinSystem;
 impl<'s> System<'s> for PlayerWinSystem {
-    type SystemData = (Write<'s, StageState>, SoundPlayer<'s>);
+    type SystemData = (Write<'s, StageState>, SoundPlayer<'s>, PrefabSpawner<'s>);
 
-    fn run(&mut self, (mut stage_state, sound): Self::SystemData) {
-        if stage_state.notes_found.len() == 8 {
+    fn run(&mut self, (mut stage_state, sound, spawner): Self::SystemData) {
+        if stage_state.notes_found.len() == 8 && !stage_state.winning {
             stage_state.win();
+        } else if stage_state.missed >= 3 && !stage_state.losing {
+            stage_state.lose();
         }
     }
 }

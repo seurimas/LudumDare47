@@ -204,6 +204,11 @@ pub fn rand_chance(chance: f32) -> bool {
     thread_rng().gen_range(0.0, 1.0) < chance
 }
 
+pub fn rand_shuffle<T>(values: &mut [T]) {
+    use rand::seq::SliceRandom;
+    values.shuffle(&mut thread_rng());
+}
+
 pub const C4: usize = 0;
 pub const D4: usize = 2;
 pub const E4: usize = 4;

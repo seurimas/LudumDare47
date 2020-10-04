@@ -89,6 +89,38 @@ Prefab(
                                 ],
                             )
                         ),
+                        (
+                            Die,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        SpriteIndex,
+                                        (
+                                            input: [0.0, 0.1, 0.15, 0.2],
+                                            output: [1, 2, 3, 0],
+                                            function: Step,
+                                        )
+                                    ),
+                                ],
+                            )
+                        ),
+                        (
+                            Spawn,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        SpriteIndex,
+                                        (
+                                            input: [0.0, 0.1, 0.15, 0.2],
+                                            output: [1, 2, 3, 0],
+                                            function: Step,
+                                        )
+                                    ),
+                                ],
+                            )
+                        ),
                     ],
                 ),
                 transform_animation_set: (
@@ -136,7 +168,45 @@ Prefab(
                                     )
                                 ],
                             )
-                        )
+                        ),
+                        (
+                            Die,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        Scale,
+                                        (
+                                            input: [0.0, 1.0],
+                                            output: [
+                                                Vec3((1., 1., 1.)),
+                                                Vec3((0., 0., 1.)),
+                                            ],
+                                            function: Linear,
+                                        )
+                                    )
+                                ],
+                            )
+                        ),
+                        (
+                            Spawn,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        Scale,
+                                        (
+                                            input: [0.0, 0.5],
+                                            output: [
+                                                Vec3((0., 0., 1.)),
+                                                Vec3((1., 1., 1.)),
+                                            ],
+                                            function: Linear,
+                                        )
+                                    )
+                                ],
+                            )
+                        ),
                     ],
                 ),
             ),
