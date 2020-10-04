@@ -38,29 +38,41 @@ Prefab(
                                     texture_width: 256,
                                     texture_height: 256,
                                     sprites: [
-                                        (
+                                        ( // Chute: 0
                                             x: 0,
                                             y: 80,
                                             height: 32,
                                             width: 32,
                                         ),
-                                        (
+                                        ( // Backdrop: 1
                                             x: 32,
                                             y: 80,
                                             height: 128,
                                             width: 32,
                                         ),
-                                        (
+                                        ( // Flags: 2
                                             x: 64,
                                             y: 80,
                                             height: 16,
                                             width: 160,
                                         ),
-                                        (
+                                        ( // Awning: 3
                                             x: 64,
                                             y: 96,
                                             height: 16,
                                             width: 160,
+                                        ),
+                                        ( // Life: 4
+                                            x: 64,
+                                            y: 112,
+                                            height: 32,
+                                            width: 32,
+                                        ),
+                                        ( // Death: 5
+                                            x: 96,
+                                            y: 112,
+                                            height: 32,
+                                            width: 32,
                                         ),
                                     ],
                                 )),
@@ -159,7 +171,48 @@ Prefab(
                         translation: (64., 156., -80.),
                     ),
                 )
-
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 4,
+                    ),
+                    transform: (
+                        translation: (0., 80., -190.),
+                    ),
+                ),
+                miss_indicator: MissIndicator(1),
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 4,
+                    ),
+                    transform: (
+                        translation: (64., 80., -190.),
+                    ),
+                ),
+                miss_indicator: MissIndicator(2),
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 4,
+                    ),
+                    transform: (
+                        translation: (128., 80., -190.),
+                    ),
+                ),
+                miss_indicator: MissIndicator(3),
             )
         ),
     ],

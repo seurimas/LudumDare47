@@ -196,6 +196,7 @@ impl SimpleState for LoadingState {
 
         let jump = load_sound_file(data.world, "hup.wav".to_string(), &mut progress_counter);
         let tap = load_sound_file(data.world, "tap.wav".to_string(), &mut progress_counter);
+        let miss = load_sound_file(data.world, "tap.wav".to_string(), &mut progress_counter);
 
         let foo_scale = SCALE
             .iter()
@@ -222,6 +223,7 @@ impl SimpleState for LoadingState {
             SoundStorage {
                 jump,
                 tap,
+                miss,
                 foo_scale,
             },
         ));

@@ -1,4 +1,4 @@
-use crate::hazards::Hazard;
+use crate::stage::MissIndicator;
 use amethyst::{
     animation::*,
     assets::*,
@@ -22,6 +22,7 @@ pub struct SpriteEntityPrefabData {
     sprite_scene: Option<SpriteScenePrefab>,
     animation_set: Option<AnimationSetPrefab<AnimationId, SpriteRender>>,
     transform_animation_set: Option<AnimationSetPrefab<AnimationId, Transform>>,
+    miss_indicator: Option<MissIndicator>,
 }
 
 pub fn load_prefab<'a>(
@@ -92,6 +93,7 @@ pub const SCALE: [&'static str; NOTE_COUNT] = [
 #[derive(Clone)]
 pub struct SoundStorage {
     pub jump: SourceHandle,
+    pub miss: SourceHandle,
     pub tap: SourceHandle,
     pub foo_scale: Vec<SourceHandle>,
 }

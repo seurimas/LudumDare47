@@ -98,6 +98,7 @@ pub struct StageDescription {
 pub struct StageState {
     platforms: HashMap<(u32, u32), Entity>,
     time_in_song: f32,
+    missed: i32,
 }
 
 impl Default for StageState {
@@ -105,6 +106,7 @@ impl Default for StageState {
         StageState {
             platforms: HashMap::new(),
             time_in_song: -4.0,
+            missed: 0,
         }
     }
 }
@@ -244,6 +246,7 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
     world.insert::<StageState>(StageState {
         platforms,
         time_in_song: -4.0,
+        missed: 0,
     });
 }
 
@@ -258,6 +261,7 @@ impl<'s> System<'s> for PlatformAnimationSystem {
         WriteStorage<'s, AnimationControlSet<AnimationId, SpriteRender>>,
         ReadStorage<'s, AnimationSet<AnimationId, Transform>>,
         WriteStorage<'s, AnimationControlSet<AnimationId, Transform>>,
+        Write<'s, StageState>,
         Entities<'s>,
         SoundPlayer<'s>,
     );
@@ -273,6 +277,7 @@ impl<'s> System<'s> for PlatformAnimationSystem {
             mut control_sets,
             t_animation_sets,
             mut t_control_sets,
+            mut stage_state,
             entities,
             sound,
         ): Self::SystemData,
@@ -307,6 +312,9 @@ impl<'s> System<'s> for PlatformAnimationSystem {
             if need_to_wobble || need_to_play {
                 if need_to_wobble {
                     sound.play_normal(|store| &store.tap);
+                } else if platform.has_player {
+                    sound.play_normal(|store| &store.miss);
+                    stage_state.missed += 1;
                 } else {
                     sound.play_normal(|store| {
                         store
@@ -506,6 +514,35 @@ impl<'a, 'b> SystemBundle<'a, 'b> for StageBundle {
         dispatcher.add(BallDropperSystem, "ball_dropper", &[]);
         dispatcher.add(NoteAnimationSystem, "note_animation", &[]);
         dispatcher.add(NotePickupSystem, "note_pickup", &[]);
+        dispatcher.add(PlayerMissSystem, "player_miss", &[]);
         Ok(())
+    }
+}
+
+#[derive(Component, Debug, PrefabData, Clone, Deserialize, Serialize)]
+#[prefab(Component)]
+#[storage(VecStorage)]
+pub struct MissIndicator(i32);
+
+struct PlayerMissSystem;
+impl<'s> System<'s> for PlayerMissSystem {
+    type SystemData = (
+        ReadStorage<'s, MissIndicator>,
+        WriteStorage<'s, SpriteRender>,
+        Write<'s, StageState>,
+        SoundPlayer<'s>,
+    );
+
+    fn run(&mut self, (misses, mut sprites, stage_state, sound): Self::SystemData) {
+        for (miss_num, mut sprite) in (&misses, &mut sprites).join() {
+            print!("{}", miss_num.0);
+            if miss_num.0 <= stage_state.missed {
+                println!("On {}", stage_state.missed);
+                sprite.sprite_number = 5;
+            } else {
+                println!("Off {}", stage_state.missed);
+                sprite.sprite_number = 4;
+            }
+        }
     }
 }

@@ -7,8 +7,10 @@ pub use crate::stage::{Platform, StageState};
 pub use amethyst::{
     animation::*,
     assets::{Handle, Prefab},
+    assets::{PrefabData, ProgressCounter},
     audio::{output::Output, Source, SourceHandle},
     core::{bundle::SystemBundle, timing::Time, Transform},
+    derive::PrefabData,
     ecs::world::LazyBuilder,
     ecs::*,
     error::Error,
@@ -29,6 +31,7 @@ use amethyst::{
     shred::{ResourceId, SystemData},
 };
 pub use rand::prelude::*;
+pub use serde::{Deserialize, Serialize};
 
 pub fn get_active_animation<T: amethyst::animation::AnimationSampling>(
     control_set: &AnimationControlSet<AnimationId, T>,
