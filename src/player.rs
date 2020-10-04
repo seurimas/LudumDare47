@@ -28,6 +28,9 @@ pub enum PlayerState {
         y2: f32,
         z: f32,
     },
+    Landing {
+        ttl: f32,
+    },
 }
 impl PlayerState {
     pub fn is_airborne(&self) -> bool {
@@ -94,26 +97,31 @@ struct PlayerAnimationSystem;
 impl<'s> System<'s> for PlayerAnimationSystem {
     type SystemData = (
         ReadStorage<'s, Player>,
-        ReadStorage<'s, AnimationSet<AnimationId, SpriteRender>>,
-        WriteStorage<'s, AnimationControlSet<AnimationId, SpriteRender>>,
+        SimpleAnimationSystem<'s, SpriteRender>,
         Entities<'s>,
     );
 
-    fn run(&mut self, (players, animation_sets, mut control_sets, entities): Self::SystemData) {
-        for (player, animation_set, entity) in (&players, &animation_sets, &entities).join() {
-            if let Some(control_set) = get_animation_set(&mut control_sets, entity) {
-                if let Some(AnimationId::Idle) = get_active_animation(control_set) {
-                    set_active_animation(
-                        control_set,
-                        AnimationId::Move,
-                        &animation_set,
-                        EndControl::Loop(None),
-                        1.0,
-                    );
+    fn run(&mut self, (players, mut animator, entities): Self::SystemData) {
+        for (player, entity) in (&players, &entities).join() {
+            animator.start_if_idle(entity, AnimationId::Idle, EndControl::Loop(None), 1.0);
+            match player.state {
+                PlayerState::Moving { .. } => {
+                    animator.start(entity, AnimationId::Move, EndControl::Normal, 1.0);
                 }
+                PlayerState::Jumping { .. } => {
+                    animator.start(entity, AnimationId::Jump, EndControl::Stay, 1.0);
+                }
+                PlayerState::Landing { .. } => {
+                    animator.start(entity, AnimationId::Land, EndControl::Stay, 1.0);
+                }
+                _ => {}
             }
         }
     }
+}
+
+fn jump_height(progress: f32) -> f32 {
+    8. - 32. * (progress - 0.5) * (progress - 0.5)
 }
 
 struct PlayerJumpingSystem;
@@ -135,6 +143,7 @@ impl<'s> System<'s> for PlayerJumpingSystem {
         for (mut player, entity) in (&mut players, &entities).join() {
             match player.state {
                 PlayerState::Idle => {}
+                PlayerState::Landing { .. } => {}
                 PlayerState::Jumping {
                     progress,
                     x1,
@@ -146,12 +155,12 @@ impl<'s> System<'s> for PlayerJumpingSystem {
                     if let Some(mut player_loc) = transforms.get_mut(entity) {
                         player_loc.set_translation_xyz(
                             lerp(progress, x1, x2),
-                            lerp(progress, y1, y2),
+                            lerp(progress, y1, y2) + jump_height(progress),
                             z,
                         );
                         let new_progress = progress + (time.delta_seconds() * player.jump_speed);
                         if new_progress > 1.0 {
-                            player.state = PlayerState::Idle;
+                            player.state = PlayerState::Landing { ttl: 0.1 };
                         } else {
                             player.state = PlayerState::Jumping {
                                 progress: new_progress,
@@ -265,6 +274,15 @@ impl<'s> System<'s> for PlayerMovementSystem {
             for (mut player, mut transform) in (&mut player, &mut transforms).join() {
                 match player.state {
                     PlayerState::Jumping { .. } => {}
+                    PlayerState::Landing { ttl } => {
+                        if ttl < time.delta_seconds() {
+                            player.state = PlayerState::Idle;
+                        } else {
+                            player.state = PlayerState::Landing {
+                                ttl: ttl - time.delta_seconds(),
+                            };
+                        }
+                    }
                     _ => {
                         let mut translation = transform.translation_mut();
                         translation.x += x_tilt * player.move_speed * time.delta_seconds();

@@ -89,6 +89,44 @@ impl<'a> SoundPlayer<'a> {
 }
 
 #[derive(SystemData)]
+pub struct SimpleAnimationSystem<'s, T: amethyst::animation::AnimationSampling> {
+    animation_sets: ReadStorage<'s, AnimationSet<AnimationId, T>>,
+    control_sets: WriteStorage<'s, AnimationControlSet<AnimationId, T>>,
+}
+
+impl<'a, T: amethyst::animation::AnimationSampling> SimpleAnimationSystem<'a, T> {
+    pub fn start(&mut self, entity: Entity, id: AnimationId, end_control: EndControl, rate: f32) {
+        if let (Some(animation_set), Some(control_set)) = (
+            self.animation_sets.get(entity),
+            get_animation_set(&mut self.control_sets, entity),
+        ) {
+            set_active_animation(control_set, id, &animation_set, end_control, rate);
+        }
+    }
+
+    pub fn start_if_idle(
+        &mut self,
+        entity: Entity,
+        id: AnimationId,
+        end_control: EndControl,
+        rate: f32,
+    ) {
+        if let (Some(animation_set), Some(control_set)) = (
+            self.animation_sets.get(entity),
+            get_animation_set(&mut self.control_sets, entity),
+        ) {
+            let active_animation = get_active_animation(control_set);
+            if active_animation.is_none()
+                || (active_animation == Some(AnimationId::Idle) && id != AnimationId::Idle)
+            {
+                println!("Was idle!");
+                set_active_animation(control_set, id, &animation_set, end_control, rate);
+            }
+        }
+    }
+}
+
+#[derive(SystemData)]
 pub struct PrefabSpawner<'a> {
     sprites: Option<Read<'a, SpriteStorage>>,
     prefabs: Option<Read<'a, PrefabStorage>>,

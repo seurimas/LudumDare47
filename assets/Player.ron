@@ -37,7 +37,7 @@ Prefab(
                             Grid((
                                     texture_width: 256,
                                     texture_height: 256,
-                                    columns: 4,
+                                    columns: 8,
                                     rows: 1,
                                     cell_size: (32, 32),
                                     position: (0, 0),
@@ -63,7 +63,7 @@ Prefab(
                                         SpriteIndex,
                                         (
                                             input: [0.0, 1.0],
-                                            output: [0, 0],
+                                            output: [0, 1],
                                             function: Step,
                                         )
                                     ),
@@ -78,8 +78,72 @@ Prefab(
                                         0,
                                         SpriteIndex,
                                         (
-                                            input: [0.0, 0.166666, 0.33333, 0.500, 0.6666, 0.86666],
-                                            output: [0, 1, 2, 3, 2, 1],
+                                            input: [0.0, 0.1, 0.2],
+                                            output: [0, 1, 0],
+                                            function: Step,
+                                        )
+                                    ),
+                                ],
+                            )
+                        ),
+                        (
+                            Jump,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        SpriteIndex,
+                                        (
+                                            input: [0.0, 0.06666, 0.13333],
+                                            output: [0, 1, 2],
+                                            function: Step,
+                                        )
+                                    ),
+                                ],
+                            )
+                        ),
+                        (
+                            Land,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        SpriteIndex,
+                                        (
+                                            input: [0.0, 0.06666, 0.13333],
+                                            output: [3, 1, 0],
+                                            function: Step,
+                                        )
+                                    ),
+                                ],
+                            )
+                        ),
+                        (
+                            Die,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        SpriteIndex,
+                                        (
+                                            input: [0.0, 0.1, 0.2],
+                                            output: [4, 5, 6],
+                                            function: Step,
+                                        )
+                                    ),
+                                ],
+                            )
+                        ),
+                        (
+                            Hit,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        SpriteIndex,
+                                        (
+                                            input: [0.0, 0.1, 0.2],
+                                            output: [0, 4, 0],
                                             function: Step,
                                         )
                                     ),

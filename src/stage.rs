@@ -635,12 +635,9 @@ impl<'s> System<'s> for PlayerMissSystem {
 
     fn run(&mut self, (misses, mut sprites, stage_state, sound): Self::SystemData) {
         for (miss_num, mut sprite) in (&misses, &mut sprites).join() {
-            print!("{}", miss_num.0);
             if miss_num.0 <= stage_state.missed {
-                println!("On {}", stage_state.missed);
                 sprite.sprite_number = 5;
             } else {
-                println!("Off {}", stage_state.missed);
                 sprite.sprite_number = 4;
             }
         }

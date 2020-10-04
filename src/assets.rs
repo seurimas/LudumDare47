@@ -104,9 +104,11 @@ pub enum AnimationId {
     Spawn,
     Idle,
     Move,
+    Jump,
     Beat,
     Die,
-    //    Hit,
+    Hit,
+    Land,
     //    Kill,
 }
 
