@@ -37,6 +37,7 @@ pub fn load_prefab<'a>(
 #[derive(Clone)]
 pub struct PrefabStorage {
     pub player: Handle<Prefab<SpriteEntityPrefabData>>,
+    pub notes: Handle<Prefab<SpriteEntityPrefabData>>,
     pub ball: Handle<Prefab<SpriteEntityPrefabData>>,
     pub shadow: Handle<Prefab<SpriteEntityPrefabData>>,
     pub platform: Handle<Prefab<SpriteEntityPrefabData>>,

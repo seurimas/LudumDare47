@@ -15,7 +15,7 @@ pub use amethyst::{
     renderer::{
         camera::*,
         debug_drawing::DebugLines,
-        palette::Srgba,
+        palette::{Hsl, RgbHue, Srgba},
         plugins::{RenderDebugLines, RenderFlat2D, RenderToWindow},
         sprite::SpriteSheetHandle,
         types::{DefaultBackend, Texture},
@@ -147,8 +147,21 @@ pub fn rand_in<T>(vec: &Vec<T>) -> &T {
         .expect("Nothing in vector")
 }
 
+pub fn rand_color() -> Srgba {
+    Hsl::new(
+        RgbHue::from_radians(thread_rng().gen_range(0., std::f32::consts::PI * 2.0)),
+        1.,
+        0.5,
+    )
+    .into()
+}
+
 pub fn rand_upto(max: usize) -> usize {
     thread_rng().gen_range(0, max)
+}
+
+pub fn rand_chance(chance: f32) -> bool {
+    thread_rng().gen_range(0.0, 1.0) < chance
 }
 
 pub const C4: usize = 0;

@@ -66,7 +66,7 @@ fn spawn_player(
         .with(transform)
         .with(Player {
             move_speed: 64.0,
-            jump_speed: 2.0,
+            jump_speed: 4.0,
             state: PlayerState::Idle,
             platform: platform,
             on_edge: false,

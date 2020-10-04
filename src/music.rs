@@ -8,6 +8,7 @@ pub const SUBNOTES: i32 = 4;
 pub struct Song {
     pub bpm: i32,
     pub structures: Vec<Substructure>,
+    pub payouts: Vec<Substructure>,
 }
 
 impl Song {
@@ -18,6 +19,13 @@ impl Song {
         }
         notes
     }
+    pub fn get_rewards_at(&self, beat: i32) -> Vec<Note> {
+        let mut payouts = Vec::new();
+        for payout in self.payouts.iter() {
+            payouts.append(&mut payout.get_notes_at(beat));
+        }
+        payouts
+    }
 }
 
 impl Default for Song {
@@ -25,6 +33,7 @@ impl Default for Song {
         Song {
             bpm: 48,
             structures: vec![Substructure::row_your_boat()],
+            payouts: vec![Substructure::random()],
         }
     }
 }
@@ -35,7 +44,13 @@ pub enum Substructure {
         notes: HashMap<i32, Note>,
         rounds: i32,
         repeat_at: i32,
+        restart_at: i32,
         pitch_up: usize,
+    },
+    Random {
+        notes: Vec<Note>,
+        interval: i32,
+        chance: f32,
     },
 }
 
@@ -78,12 +93,22 @@ impl Substructure {
         }
         let rounds = 2;
         let repeat_at = 12;
+        let restart_at = 57;
         let pitch_up = 0;
         Substructure::Round {
             notes,
             rounds,
             repeat_at,
             pitch_up,
+            restart_at,
+        }
+    }
+
+    fn random() -> Self {
+        Substructure::Random {
+            notes: vec![C4, D4, E4, F4, G4, A4, B4, C5, D5, G5],
+            interval: 12,
+            chance: 1.,
         }
     }
 
@@ -94,16 +119,28 @@ impl Substructure {
                 rounds,
                 repeat_at,
                 pitch_up,
+                restart_at,
             } => {
                 let mut notes_at = Vec::new();
                 for i in 0..*rounds {
-                    let nominal_beat = beat - (repeat_at * i);
+                    let nominal_beat = (beat % restart_at) - (repeat_at * i);
                     if let Some(note) = notes.get(&nominal_beat) {
                         let note = (note + (*pitch_up * i as usize)) % NOTE_COUNT;
                         notes_at.push(note);
                     }
                 }
                 notes_at
+            }
+            Substructure::Random {
+                notes,
+                interval,
+                chance,
+            } => {
+                if (beat % interval) == 0 && rand_chance(*chance) {
+                    vec![*rand_in(notes)]
+                } else {
+                    vec![]
+                }
             }
         }
     }

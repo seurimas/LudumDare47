@@ -1,4 +1,5 @@
 use crate::music::*;
+use crate::pickups::*;
 use crate::player::spawn_player_world;
 use crate::prelude::*;
 use amethyst::{
@@ -35,14 +36,6 @@ pub fn initialize_camera(world: &mut World, dimensions: &ScreenDimensions) -> En
         ))
         .with(transform)
         .build()
-}
-
-#[derive(Debug, Clone)]
-pub struct StageDescription {
-    width: u32,
-    height: u32,
-    player_spawn: (u32, u32),
-    song: Song,
 }
 
 #[derive(Component, Debug, Copy, Clone)]
@@ -89,16 +82,24 @@ impl Default for Shadow {
 }
 
 #[derive(Debug, Clone)]
+pub struct StageDescription {
+    width: u32,
+    height: u32,
+    player_spawn: (u32, u32),
+    song: Song,
+}
+
+#[derive(Debug, Clone)]
 pub struct StageState {
     platforms: HashMap<(u32, u32), Entity>,
-    beat: f32,
+    time_in_song: f32,
 }
 
 impl Default for StageState {
     fn default() -> Self {
         StageState {
             platforms: HashMap::new(),
-            beat: 0.0,
+            time_in_song: -4.0,
         }
     }
 }
@@ -188,7 +189,7 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
     world.insert::<StageDescription>(stage_desc);
     world.insert::<StageState>(StageState {
         platforms,
-        beat: 0.0,
+        time_in_song: -4.0,
     });
 }
 
@@ -372,12 +373,14 @@ impl<'s> System<'s> for PlatformBeatSystem {
         &mut self,
         (mut platforms, parents, transforms, stage_desc, mut stage_state, time, spawner, sound): Self::SystemData,
     ) {
-        let last_beat = stage_state.beat;
         let song = &stage_desc.song;
+        let last_time = stage_state.time_in_song;
+        stage_state.time_in_song += time.delta_seconds();
+        let last_beat = last_time * ((song.bpm as f32) / 60.0);
         let new_beat = last_beat + (time.delta_seconds() * (song.bpm as f32) / 60.0);
         let last_sub_beat = (last_beat * SUBNOTES as f32) as i32;
         let new_sub_beat = (new_beat * SUBNOTES as f32) as i32;
-        if new_sub_beat > last_sub_beat {
+        if new_sub_beat > last_sub_beat && new_sub_beat >= 0 {
             for note in song.get_notes_at(new_sub_beat) {
                 for (platform, entity) in (&platforms, &spawner.entities).join() {
                     if platform.note as usize == note {
@@ -409,9 +412,30 @@ impl<'s> System<'s> for PlatformBeatSystem {
                     }
                 }
             }
-            println!("{}", new_sub_beat);
+            for note in song.get_rewards_at(new_sub_beat) {
+                for (platform, entity) in (&platforms, &spawner.entities).join() {
+                    if platform.note as usize == note {
+                        let mut note_transform = Transform::default();
+                        if let Some(transform) = parents
+                            .get(entity)
+                            .and_then(|parent| transforms.get(parent.entity))
+                        {
+                            note_transform.set_translation_xyz(
+                                transform.translation().x,
+                                transform.translation().y,
+                                transform.translation().z + 0.01,
+                            );
+                        }
+                        spawner.spawn_prefab(
+                            |prefabs| &prefabs.notes,
+                            move |builder| {
+                                builder.with(note_transform).with(NotePickup::new(entity))
+                            },
+                        );
+                    }
+                }
+            }
         }
-        stage_state.beat = new_beat;
     }
 }
 
@@ -426,6 +450,8 @@ impl<'a, 'b> SystemBundle<'a, 'b> for StageBundle {
         dispatcher.add(PlatformAnimationSystem, "platform_animation", &[]);
         dispatcher.add(PlatformBeatSystem, "platform_beat", &[]);
         dispatcher.add(BallDropperSystem, "ball_dropper", &[]);
+        dispatcher.add(NoteAnimationSystem, "note_animation", &[]);
+        dispatcher.add(NotePickupSystem, "note_pickup", &[]);
         Ok(())
     }
 }

@@ -4,6 +4,7 @@ extern crate nalgebra19 as na19;
 mod assets;
 mod hazards;
 mod music;
+mod pickups;
 mod player;
 mod prelude;
 mod stage;
@@ -179,6 +180,7 @@ impl SimpleState for LoadingState {
         let tiles = load_spritesheet(data.world, "Tiles".to_string(), &mut progress_counter);
 
         let player = load_prefab(data.world, "Player.ron".to_string(), &mut progress_counter);
+        let notes = load_prefab(data.world, "Notes.ron".to_string(), &mut progress_counter);
         let ball = load_prefab(
             data.world,
             "BallDrop.ron".to_string(),
@@ -207,6 +209,7 @@ impl SimpleState for LoadingState {
             PrefabStorage {
                 ball,
                 shadow,
+                notes,
                 platform,
                 player,
             },
@@ -285,7 +288,8 @@ fn main() -> amethyst::Result<()> {
         .with_bundle(StageBundle)?
         .with_bundle(HazardsBundle)?
         .with_bundle(UiBundle::<amethyst::input::StringBindings>::new())?
-        .with(DebugDrawShapes, "debug_shapes", &[]);
+        //.with(DebugDrawShapes, "debug_shapes", &[])
+        ;
 
     let mut game = Application::new(resources, LoadingState::default(), game_data)?;
     game.run();

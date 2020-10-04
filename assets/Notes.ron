@@ -1,0 +1,84 @@
+#![enable(implicit_some)]
+/*!
+    @import /amethyst_assets/src/prefab/mod.rs#Prefab
+    @import ../src/assets.rs#SpriteEntityPrefabData
+    Prefab<SpriteEntityPrefabData>
+*/
+
+/*
+    Note
+*/
+Prefab(
+    entities: [
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    sheet: Sheet(
+                        texture: File("Master.png", (
+                            "IMAGE", (
+                                sampler_info: (
+                                    min_filter: Nearest,
+                                    mag_filter: Nearest,
+                                    mip_filter: Nearest,
+                                    wrap_mode: (Tile, Tile, Tile),
+                                    lod_bias: (0),
+                                    lod_range: (
+                                        start: ( 0 ),
+                                        end: ( 8000 ),
+                                    ),
+                                    comparison: None,
+                                    border: (0),
+                                    anisotropic: Off,
+				                    normalized: true,
+                                ),
+                            ),
+                        )),
+                        sprites: [
+                            List((
+                                    texture_width: 256,
+                                    texture_height: 256,
+                                    sprites: [
+                                        (x: 128, y: 32, width: 16, height: 16),
+                                        (x: 144, y: 32, width: 16, height: 16),
+                                        (x: 160, y: 32, width: 16, height: 16),
+                                    ],
+                            )),
+                        ],
+                        name: "notes",
+                    ),
+                    // SpriteRenderPrefab
+                    render: (
+                        sheet: "notes",
+                        sprite_number: 0,
+                    ),
+                ),
+                transform_animation_set: (
+                    animations: [
+                        (
+                            Beat,
+                            (
+                                samplers: [
+                                    (
+                                        0,
+                                        Rotation,
+                                        (
+                                            input: [0.0, 0.05, 0.1, 0.15, 0.2],
+                                            output: [
+                                                Vec4((0., 0., 0., 1.)),
+                                                Vec4((0., 0., -0.1, 1.)),
+                                                Vec4((0., 0., 0., 1.)),
+                                                Vec4((0., 0., 0.1, 1.)),
+                                                Vec4((0., 0., 0., 1.)),
+                                            ],
+                                            function: SphericalLinear,
+                                        )
+                                    )
+                                ],
+                            )
+                        )
+                    ],
+                ),
+            ),
+        ),
+    ],
+)
