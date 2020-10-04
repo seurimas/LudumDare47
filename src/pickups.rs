@@ -29,13 +29,23 @@ impl<'s> System<'s> for NotePickupSystem {
         Write<'s, StageState>,
         Entities<'s>,
         Read<'s, Time>,
+        SoundPlayer<'s>,
     );
-    fn run(&mut self, (mut notes, players, mut stage_state, entities, time): Self::SystemData) {
+    fn run(
+        &mut self,
+        (mut notes, players, mut stage_state, entities, time, sound): Self::SystemData,
+    ) {
         for (mut note, note_entity) in (&mut notes, &entities).join() {
             for (player) in (&players).join() {
                 if Some(note.platform) == player.platform && !player.state.is_airborne() {
                     entities.delete(note_entity);
                     stage_state.notes_found.push(note.value);
+                    sound.play_normal(|store| {
+                        store
+                            .note_scale
+                            .get(note.value as usize)
+                            .expect("Missing note")
+                    });
                 }
             }
             note.ttl -= time.delta_seconds();

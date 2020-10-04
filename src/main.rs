@@ -198,6 +198,16 @@ impl SimpleState for LoadingState {
         let tap = load_sound_file(data.world, "tap.wav".to_string(), &mut progress_counter);
         let miss = load_sound_file(data.world, "tap.wav".to_string(), &mut progress_counter);
 
+        let note_scale = SCALE
+            .iter()
+            .map(|note| {
+                load_sound_file(
+                    data.world,
+                    format!("note/{}.wav", note),
+                    &mut progress_counter,
+                )
+            })
+            .collect::<Vec<SourceHandle>>();
         let foo_scale = SCALE
             .iter()
             .map(|note| {
@@ -225,6 +235,7 @@ impl SimpleState for LoadingState {
                 tap,
                 miss,
                 foo_scale,
+                note_scale,
             },
         ));
     }

@@ -1,6 +1,6 @@
 use crate::music::*;
 use crate::pickups::*;
-use crate::player::spawn_player_world;
+use crate::player::*;
 use crate::prelude::*;
 use amethyst::{
     animation::*,
@@ -103,24 +103,36 @@ pub struct StageState {
     pub notes_found: Vec<Note>,
     pub winning: bool,
     pub losing: bool,
+    pub playing: bool,
     song: Song,
+    songs: [Song; SONG_COUNT],
+    song_index: i32,
 }
 
 impl Default for StageState {
     fn default() -> Self {
+        StageState::new(HashMap::new(), Song::alouette())
+    }
+}
+
+impl StageState {
+    pub fn new(platforms: HashMap<(u32, u32), Entity>, song: Song) -> Self {
         StageState {
-            platforms: HashMap::new(),
+            platforms,
             time_in_song: -4.0,
             missed: 0,
             notes_found: Vec::new(),
             winning: false,
             losing: false,
-            song: Song::alouette(),
+            playing: false,
+            song,
+            songs: Song::songs(),
+            song_index: 0,
         }
     }
-}
-
-impl StageState {
+    pub fn get_spawn(&self) -> Option<&Entity> {
+        self.platforms.get(&(2, 2))
+    }
     pub fn target_platform(&self, current: Platform, tx: f32, ty: f32) -> Option<&Entity> {
         let mut x = if tx > 0.0 {
             current.x + 1
@@ -151,6 +163,17 @@ impl StageState {
         self.missed = 0;
         self.notes_found = Vec::new();
         self.winning = true;
+        self.song_index += 1;
+    }
+
+    pub fn reset(&mut self) {
+        self.song_index = 0;
+        self.missed = 0;
+        self.notes_found = Vec::new();
+        self.song_index = 0;
+        self.playing = false;
+        self.losing = false;
+        self.winning = false;
     }
 
     pub fn lose(&mut self) {
@@ -158,6 +181,20 @@ impl StageState {
         self.time_in_song = -0.5;
         self.missed = 3;
         self.losing = true;
+    }
+
+    pub fn start_new_song(&mut self) {
+        self.song = self.songs[(self.song_index as usize) % SONG_COUNT].clone();
+        self.time_in_song = -4.0;
+        self.playing = true;
+        self.winning = false;
+        self.losing = false;
+        self.missed = 0;
+        self.notes_found = Vec::new();
+    }
+
+    fn beat(&self) -> i32 {
+        (SUBNOTES as f32 * self.time_in_song * ((self.song.bpm as f32) / 60.0)) as i32
     }
 }
 
@@ -264,18 +301,10 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
         }
         player_spawn_and_loc
     } {
-        spawn_player_world(world, Some(player_spawn), translation);
+        spawn_player_world(world);
     }
     world.insert::<StageDescription>(stage_desc);
-    world.insert::<StageState>(StageState {
-        platforms,
-        time_in_song: -4.0,
-        missed: 0,
-        notes_found: Vec::new(),
-        winning: false,
-        losing: false,
-        song: Song::alouette(),
-    });
+    world.insert::<StageState>(StageState::new(platforms, Song::alouette()));
 }
 
 struct PlatformAnimationSystem;
@@ -388,12 +417,21 @@ impl<'s> System<'s> for PlatformAnimationSystem {
                             );
                         }
                     }
-                    sound.play_normal(|store| {
-                        store
-                            .foo_scale
-                            .get(platform.note as usize)
-                            .expect("Missing note")
-                    });
+                    if !stage_state.winning {
+                        sound.play_normal(|store| {
+                            store
+                                .foo_scale
+                                .get(platform.note as usize)
+                                .expect("Missing note")
+                        });
+                    } else {
+                        sound.play_normal(|store| {
+                            store
+                                .note_scale
+                                .get(platform.note as usize)
+                                .expect("Missing note")
+                        });
+                    }
                 }
                 if !stage_state.losing {
                     if let (Some(control_set), Some(t_control_set)) = (
@@ -509,6 +547,9 @@ impl<'s> System<'s> for PlatformBeatSystem {
         &mut self,
         (mut platforms, parents, transforms, stage_desc, mut stage_state, time, spawner, sound): Self::SystemData,
     ) {
+        if !stage_state.playing {
+            return;
+        }
         let last_time = stage_state.time_in_song;
         stage_state.time_in_song += time.delta_seconds();
         let last_beat = last_time * ((stage_state.song.bpm as f32) / 60.0);
@@ -608,13 +649,66 @@ impl<'a, 'b> SystemBundle<'a, 'b> for StageBundle {
 
 struct PlayerWinSystem;
 impl<'s> System<'s> for PlayerWinSystem {
-    type SystemData = (Write<'s, StageState>, SoundPlayer<'s>, PrefabSpawner<'s>);
+    type SystemData = (
+        WriteStorage<'s, Player>,
+        WriteStorage<'s, Platform>,
+        WriteStorage<'s, Transform>,
+        Write<'s, StageState>,
+        SoundPlayer<'s>,
+        PrefabSpawner<'s>,
+    );
 
-    fn run(&mut self, (mut stage_state, sound, spawner): Self::SystemData) {
+    fn run(
+        &mut self,
+        (mut players, mut platforms, mut transforms, mut stage_state, sound, spawner): Self::SystemData,
+    ) {
         if stage_state.notes_found.len() == 8 && !stage_state.winning {
             stage_state.win();
         } else if stage_state.missed >= 3 && !stage_state.losing {
             stage_state.lose();
+            for (player) in (&mut players).join() {
+                player.state = PlayerState::Dying { ttd: 0.3 };
+            }
+        } else if stage_state.winning && stage_state.song.done(stage_state.beat()) {
+            stage_state.start_new_song();
+        } else if stage_state.losing && stage_state.song.done(stage_state.beat()) {
+            for (player) in (&mut players).join() {
+                match player.state {
+                    PlayerState::Respawning { .. } => {}
+                    PlayerState::Waiting { .. } => {
+                        let mut all_dead = true;
+                        for (platform) in (&platforms).join() {
+                            if !platform.dead {
+                                all_dead = false;
+                            }
+                        }
+                        if all_dead {
+                            stage_state.reset();
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        } else if !stage_state.playing {
+            for (player, transform) in (&mut players, &mut transforms).join() {
+                match player.state {
+                    PlayerState::Waiting { .. } => {}
+                    _ => {
+                        println!("{:?}", player.state);
+                        stage_state.start_new_song();
+                    }
+                }
+            }
+        } else if stage_state.losing || !stage_state.playing {
+            for (player, transform) in (&mut players, &mut transforms).join() {
+                match player.state {
+                    PlayerState::Respawning { .. } => {
+                        transform.set_translation_xyz(0., -24., 100.);
+                        player.platform = None;
+                    }
+                    _ => {}
+                }
+            }
         }
     }
 }

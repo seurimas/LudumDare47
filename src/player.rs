@@ -31,6 +31,15 @@ pub enum PlayerState {
     Landing {
         ttl: f32,
     },
+    Waiting {
+        prepped: bool,
+    },
+    Dying {
+        ttd: f32,
+    },
+    Respawning {
+        ttl: f32,
+    },
 }
 impl PlayerState {
     pub fn is_airborne(&self) -> bool {
@@ -55,40 +64,30 @@ fn spawn_player(
     prefabs: &PrefabStorage,
     sprites: &SpriteStorage,
     player_builder: LazyBuilder,
-    platform: Option<Entity>,
-    platform_transform: na19::Vector3<f32>,
 ) -> Entity {
     let mut transform = Transform::default();
-    transform.set_translation_xyz(
-        platform_transform.x,
-        platform_transform.y,
-        platform_transform.y + 0.1,
-    );
+    transform.set_translation_xyz(0., -24., 100.);
     player_builder
         .with(prefabs.player.clone())
         .with(transform)
         .with(Player {
             move_speed: 64.0,
             jump_speed: 4.0,
-            state: PlayerState::Idle,
-            platform: platform,
+            state: PlayerState::Waiting { prepped: false },
+            platform: None,
             on_edge: false,
         })
         .named("player")
         .build()
 }
 
-pub fn spawn_player_world(
-    world: &mut World,
-    platform: Option<Entity>,
-    platform_transform: na19::Vector3<f32>,
-) -> Entity {
+pub fn spawn_player_world(world: &mut World) -> Entity {
     let entities = world.entities();
     let update = world.write_resource::<LazyUpdate>();
     let builder = update.create_entity(&entities);
     let prefabs = world.read_resource::<PrefabStorage>();
     let sprites = world.read_resource::<SpriteStorage>();
-    let player = spawn_player(&prefabs, &sprites, builder, platform, platform_transform);
+    let player = spawn_player(&prefabs, &sprites, builder);
     let builder = update.create_entity(&entities);
     player
 }
@@ -113,6 +112,12 @@ impl<'s> System<'s> for PlayerAnimationSystem {
                 }
                 PlayerState::Landing { .. } => {
                     animator.start(entity, AnimationId::Land, EndControl::Stay, 1.0);
+                }
+                PlayerState::Dying { .. } => {
+                    animator.start(entity, AnimationId::Die, EndControl::Stay, 1.0);
+                }
+                PlayerState::Respawning { .. } => {
+                    animator.start(entity, AnimationId::Spawn, EndControl::Stay, 1.0);
                 }
                 _ => {}
             }
@@ -142,7 +147,7 @@ impl<'s> System<'s> for PlayerJumpingSystem {
     ) {
         for (mut player, entity) in (&mut players, &entities).join() {
             match player.state {
-                PlayerState::Idle => {}
+                PlayerState::Idle | PlayerState::Dying { .. } | PlayerState::Respawning { .. } => {}
                 PlayerState::Landing { .. } => {}
                 PlayerState::Jumping {
                     progress,
@@ -214,6 +219,39 @@ impl<'s> System<'s> for PlayerJumpingSystem {
                         }
                     }
                 }
+                PlayerState::Waiting { prepped } => {
+                    if prepped && !stage.playing {
+                        if let Some(start) = transforms
+                            .get(entity)
+                            .map(|transform| transform.translation().clone())
+                        {
+                            if let Some((target_platform, target_parent)) =
+                                stage.get_spawn().and_then(|platform_entity| {
+                                    parents
+                                        .get(*platform_entity)
+                                        .map(|parent| (platform_entity, parent))
+                                })
+                            {
+                                if let Some(end) = transforms
+                                    .get(target_parent.entity)
+                                    .map(|transform| transform.translation().clone())
+                                {
+                                    println!("Jumping!");
+                                    player.state = PlayerState::Jumping {
+                                        progress: 0.0,
+                                        x1: start.x,
+                                        x2: end.x,
+                                        y1: start.y,
+                                        y2: end.y,
+                                        z: f32::min(start.z, end.z) + 0.1,
+                                    };
+                                    player.platform = Some(target_platform.clone());
+                                    sound.play_normal(|store| &store.jump);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -258,6 +296,45 @@ impl<'s> System<'s> for PlayerPlatformingSystem {
     }
 }
 
+struct PlayerWaitingSystem;
+impl<'s> System<'s> for PlayerWaitingSystem {
+    type SystemData = (WriteStorage<'s, Player>, Read<'s, Time>);
+    fn run(&mut self, (mut players, time): Self::SystemData) {
+        for (mut player) in (&mut players).join() {
+            match player.state {
+                PlayerState::Dying { ttd } => {
+                    if ttd < time.delta_seconds() {
+                        player.state = PlayerState::Respawning { ttl: 0.3 };
+                    } else {
+                        player.state = PlayerState::Dying {
+                            ttd: ttd - time.delta_seconds(),
+                        };
+                    }
+                }
+                PlayerState::Respawning { ttl } => {
+                    if ttl < time.delta_seconds() {
+                        player.state = PlayerState::Waiting { prepped: false };
+                    } else {
+                        player.state = PlayerState::Respawning {
+                            ttl: ttl - time.delta_seconds(),
+                        };
+                    }
+                }
+                PlayerState::Landing { ttl } => {
+                    if ttl < time.delta_seconds() {
+                        player.state = PlayerState::Idle;
+                    } else {
+                        player.state = PlayerState::Landing {
+                            ttl: ttl - time.delta_seconds(),
+                        };
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
 struct PlayerMovementSystem;
 impl<'s> System<'s> for PlayerMovementSystem {
     type SystemData = (
@@ -273,14 +350,15 @@ impl<'s> System<'s> for PlayerMovementSystem {
         if let (Some(x_tilt), Some(y_tilt)) = (x_tilt, y_tilt) {
             for (mut player, mut transform) in (&mut player, &mut transforms).join() {
                 match player.state {
-                    PlayerState::Jumping { .. } => {}
-                    PlayerState::Landing { ttl } => {
-                        if ttl < time.delta_seconds() {
-                            player.state = PlayerState::Idle;
+                    PlayerState::Dying { .. }
+                    | PlayerState::Respawning { .. }
+                    | PlayerState::Landing { .. }
+                    | PlayerState::Jumping { .. } => {}
+                    PlayerState::Waiting { prepped } => {
+                        if y_tilt > 0.0 {
+                            player.state = PlayerState::Waiting { prepped: true }
                         } else {
-                            player.state = PlayerState::Landing {
-                                ttl: ttl - time.delta_seconds(),
-                            };
+                            player.state = PlayerState::Waiting { prepped: false }
                         }
                     }
                     _ => {
@@ -323,6 +401,7 @@ impl<'a, 'b> SystemBundle<'a, 'b> for PlayerBundle {
         dispatcher: &mut DispatcherBuilder<'a, 'b>,
     ) -> Result<(), Error> {
         dispatcher.add(PlayerAnimationSystem, "player_animation", &[]);
+        dispatcher.add(PlayerWaitingSystem, "player_waiting", &[]);
         dispatcher.add(PlayerMovementSystem, "player_movement", &[]);
         dispatcher.add(
             PlayerPlatformingSystem,

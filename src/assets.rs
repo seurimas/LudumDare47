@@ -97,6 +97,7 @@ pub struct SoundStorage {
     pub miss: SourceHandle,
     pub tap: SourceHandle,
     pub foo_scale: Vec<SourceHandle>,
+    pub note_scale: Vec<SourceHandle>,
 }
 
 #[derive(Eq, PartialOrd, PartialEq, Hash, Debug, Copy, Clone, Deserialize, Serialize)]

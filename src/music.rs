@@ -28,6 +28,69 @@ impl Song {
         payouts.retain(|note| !paid_out.contains(note));
         payouts
     }
+    pub fn done(&self, beat: i32) -> bool {
+        let nominal_beat = beat - ((self.bpm / 60) * 4) - 8;
+        for structure in self.structures.iter() {
+            if !structure.done(nominal_beat) {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+pub const SONG_COUNT: usize = 5;
+
+impl Song {
+    pub fn row_your_boat() -> Self {
+        Song {
+            bpm: 48,
+            structures: vec![Substructure::row_your_boat()],
+            payouts: vec![Substructure::reward_row_row()],
+            next_notes: vec![C4, D4, E4, F4, G4, A4, B4, C5],
+        }
+    }
+    pub fn alouette() -> Self {
+        Song {
+            bpm: 120,
+            structures: vec![Substructure::alouette()],
+            payouts: vec![Substructure::reward_alouette()],
+            next_notes: vec![C4, D4, E4, F4, G4, A4, B4, C5],
+        }
+    }
+    pub fn c_scale() -> Self {
+        Song {
+            bpm: 240,
+            structures: vec![Substructure::c_scales()],
+            payouts: vec![Substructure::reward_c_scale()],
+            next_notes: vec![C4, D4, E4, F4, G4, A4, B4, C5],
+        }
+    }
+    pub fn coffee() -> Self {
+        Song {
+            bpm: 240,
+            structures: vec![Substructure::coffee()],
+            payouts: vec![Substructure::reward_coffee()],
+            next_notes: vec![C4, D4, E4, F4, G4, A4, B4, C5],
+        }
+    }
+    pub fn donkeys() -> Self {
+        Song {
+            bpm: 72,
+            structures: vec![Substructure::donkeys()],
+            payouts: vec![Substructure::reward_donkeys()],
+            next_notes: vec![C4, D4, E4, F4, G4, A4, B4, C5],
+        }
+    }
+    pub fn songs() -> [Song; SONG_COUNT] {
+        [
+            Song::row_your_boat(),
+            Song::c_scale(),
+            Song::alouette(),
+            Song::coffee(),
+            Song::donkeys(),
+        ]
+    }
     pub fn payout_song(notes: &Vec<Note>) -> Self {
         Song {
             bpm: 300,
@@ -50,25 +113,6 @@ impl Song {
             structures: vec![Substructure::Scale { notes, interval: 4 }],
             payouts: vec![],
             next_notes: vec![],
-        }
-    }
-}
-
-impl Song {
-    pub fn row_your_boat() -> Self {
-        Song {
-            bpm: 48,
-            structures: vec![Substructure::row_your_boat()],
-            payouts: vec![Substructure::reward_row_row()],
-            next_notes: vec![C4, D4, E4, F4, G4, A4, B4, C5],
-        }
-    }
-    pub fn alouette() -> Self {
-        Song {
-            bpm: 120,
-            structures: vec![Substructure::alouette()],
-            payouts: vec![Substructure::reward_alouette()],
-            next_notes: vec![C4, D4, E4, F4, G4, A4, B4, C5],
         }
     }
 }
@@ -214,6 +258,252 @@ impl Substructure {
         }
     }
 
+    fn c_scales() -> Self {
+        let mut notes = HashMap::new();
+        // C D E F G A B  C  D  E  F  G
+        // 0 2 4 5 7 9 11 12 14 16 17 19
+        let progression = [
+            (0, C4),
+            (4, D4),
+            (8, E4),
+            (12, F4),
+            (16, G4),
+            (20, A4),
+            (24, B4),
+            (28, C5),
+            (32, B4),
+            (36, A4),
+            (40, G4),
+            (44, F4),
+            (48, E4),
+            (52, D4),
+            (56, C4),
+        ];
+        for (beat, note) in progression.iter() {
+            notes.insert(*beat, *note);
+        }
+        let rounds = 3;
+        let repeat_at = 28;
+        let restart_at = 60 + 84;
+        let pitch_up = 4;
+        Substructure::Round {
+            notes,
+            rounds,
+            repeat_at,
+            pitch_up,
+            restart_at,
+        }
+    }
+
+    fn reward_c_scale() -> Self {
+        let mut notes = HashMap::new();
+        let progression = [
+            (12, C5),
+            (36, B4),
+            (60, A4),
+            (74, G4),
+            (98, F4),
+            (112, E4),
+            (124, D4),
+            (136, C4),
+        ];
+        for (beat, note) in progression.iter() {
+            notes.insert(*beat, *note);
+        }
+        let rounds = 1;
+        let repeat_at = 144;
+        let restart_at = 144;
+        let pitch_up = 0;
+        Substructure::Round {
+            notes,
+            rounds,
+            repeat_at,
+            pitch_up,
+            restart_at,
+        }
+    }
+
+    fn coffee() -> Self {
+        let mut notes = HashMap::new();
+        // C D E F G A B  C  D  E  F  G
+        // 0 2 4 5 7 9 11 12 14 16 17 19
+        let progression = [
+            (0, C5),  // C
+            (4, A4),  // O
+            (8, F4),  // F
+            (12, F4), // F
+            (16, E4), // E
+            (20, E4), // E
+            (24, E4), // Not
+            (28, G4), // Tea
+            (32, E4), // But
+            (36, F4), // Cof
+            (38, E4), // fee
+            (40, F4), // is
+            (42, G4), // for
+            (44, F4), // me
+            // Round 2
+            (48, A4),     // Cof
+            (50, A4),     // fee
+            (52, C5),     // mo
+            (54, C5),     // cha
+            (56, A4),     // Cof
+            (58, A4),     // fee
+            (60, B4 - 1), // la
+            (62, A4),     // tte
+            (64, B4 - 1), // Cof
+            (66, C5),     // fee
+            (68, B4 - 1), // black
+            // Next verse
+            (72, G4),     // Are
+            (74, G4),     // you
+            (76, B4 - 1), // gro
+            (78, B4 - 1), // ggy
+            (80, G4),     // Cof
+            (82, G4),     // fee
+            (84, A4),     // gives
+            (86, G4),     // you
+            (88, A4),     // what
+            (90, B4 - 1), // you
+            (92, A4),     // lack!
+            // Round 3 and final verse
+            (96, F4),  // When
+            (100, F4), // i
+            (104, F4), // am
+            (108, G4), // feel
+            (112, G4), // ing
+            (116, G4), // slow
+            (120, C4), // Time
+            (124, C4), // for
+            (128, C5), // a
+            (132, C5), // cup
+            (136, C4), // of
+            (140, F4), // Joe!
+        ];
+        for (beat, note) in progression.iter() {
+            notes.insert(*beat, *note);
+        }
+        let rounds = 3;
+        let repeat_at = 48;
+        let restart_at = 48 * 5;
+        let pitch_up = 0;
+        Substructure::Round {
+            notes,
+            rounds,
+            repeat_at,
+            pitch_up,
+            restart_at,
+        }
+    }
+
+    fn reward_coffee() -> Self {
+        let mut notes = HashMap::new();
+        let progression = [
+            (32, C4),
+            (64, E4),
+            (96, F4),
+            (128, G4 + 1),
+            (160, A4),
+            (192, B4 - 1),
+            (224, C5),
+            (232, F5),
+        ];
+        for (beat, note) in progression.iter() {
+            notes.insert(*beat, *note);
+        }
+        let rounds = 1;
+        let repeat_at = 240;
+        let restart_at = 240;
+        let pitch_up = 0;
+        Substructure::Round {
+            notes,
+            rounds,
+            repeat_at,
+            pitch_up,
+            restart_at,
+        }
+    }
+
+    fn donkeys() -> Self {
+        let mut notes = HashMap::new();
+        // C D E F G A B  C  D  E  F  G
+        // 0 2 4 5 7 9 11 12 14 16 17 19
+        let progression = [
+            // Round 1
+            (0, E4),      // Don
+            (2, E4),      // keys
+            (4, E4),      // are
+            (6, F4 + 1),  // in
+            (8, G4 + 1),  // love
+            (10, F4 + 1), // with
+            (12, E4),     // car
+            (14, C4),     // rots
+            // Round 2
+            (16, G4 + 1), // Car
+            (18, G4 + 1), // rots
+            (20, G4 + 1), // aren't
+            (22, A4),     // in
+            (24, B4),     // love
+            (26, A4),     // at
+            (28, G4 + 1), // all
+            // Round 3
+            (32, E5), // all
+            (36, B4), // all
+            (40, E5), // all
+            (44, B4), // all
+            // Round 4
+            (48, B4),     // Car
+            (50, C5 + 1), // rots
+            (52, B4),     // aren't
+            (54, A4),     // in
+            (56, G4 + 1), // love
+            (58, F4 + 1), // at
+            (60, E4),     // all
+        ];
+        for (beat, note) in progression.iter() {
+            notes.insert(*beat, *note);
+        }
+        let rounds = 4;
+        let repeat_at = 16;
+        let restart_at = 16 * 7;
+        let pitch_up = 0;
+        Substructure::Round {
+            notes,
+            rounds,
+            repeat_at,
+            pitch_up,
+            restart_at,
+        }
+    }
+
+    fn reward_donkeys() -> Self {
+        let mut notes = HashMap::new();
+        let progression = [
+            (12, E4),
+            (24, F4 + 1),
+            (36, G4 + 1),
+            (48, A4),
+            (60, C4 + 1),
+            (72, C4),
+            (84, E5),
+            (96, B4),
+        ];
+        for (beat, note) in progression.iter() {
+            notes.insert(*beat, *note);
+        }
+        let rounds = 1;
+        let repeat_at = 112;
+        let restart_at = 112;
+        let pitch_up = 0;
+        Substructure::Round {
+            notes,
+            rounds,
+            repeat_at,
+            pitch_up,
+            restart_at,
+        }
+    }
+
     fn reward_row_row() -> Self {
         let mut notes = HashMap::new();
         let progression = [
@@ -298,6 +588,13 @@ impl Substructure {
                     vec![]
                 }
             }
+        }
+    }
+
+    fn done(&self, beat: i32) -> bool {
+        match self {
+            Substructure::Round { .. } => false,
+            Substructure::Scale { notes, interval } => beat > (notes.len() as i32 + 1) * interval,
         }
     }
 }
