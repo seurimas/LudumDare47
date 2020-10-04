@@ -74,6 +74,18 @@ Prefab(
                                             height: 32,
                                             width: 32,
                                         ),
+                                        ( // Lowboard: 6
+                                            x: 64,
+                                            y: 144,
+                                            height: 32,
+                                            width: 160,
+                                        ),
+                                        ( // Note: 7
+                                            x: 128,
+                                            y: 32,
+                                            width: 16,
+                                            height: 16,
+                                        ),
                                     ],
                                 )),
                         ],
@@ -213,6 +225,133 @@ Prefab(
                     ),
                 ),
                 miss_indicator: MissIndicator(3),
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 6,
+                    ),
+                    transform: (
+                        translation: (64., -24., 2.),
+                    ),
+                ),
+            )
+        ),
+        
+        // Note indicators
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 7,
+                    ),
+                    transform: (
+                        translation: (16., -24., 3.),
+                    ),
+                ),
+                note_indicator: NoteIndicator(0),
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 7,
+                    ),
+                    transform: (
+                        translation: (32., -24., 3.),
+                    ),
+                ),
+                note_indicator: NoteIndicator(1),
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 7,
+                    ),
+                    transform: (
+                        translation: (48., -24., 3.),
+                    ),
+                ),
+                note_indicator: NoteIndicator(2),
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 7,
+                    ),
+                    transform: (
+                        translation: (64., -24., 3.),
+                    ),
+                ),
+                note_indicator: NoteIndicator(3),
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 7,
+                    ),
+                    transform: (
+                        translation: (80., -24., 3.),
+                    ),
+                ),
+                note_indicator: NoteIndicator(4),
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 7,
+                    ),
+                    transform: (
+                        translation: (96., -24., 3.),
+                    ),
+                ),
+                note_indicator: NoteIndicator(5),
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 7,
+                    ),
+                    transform: (
+                        translation: (112., -24., 3.),
+                    ),
+                ),
+                note_indicator: NoteIndicator(6),
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 7,
+                    ),
+                    transform: (
+                        translation: (128., -24., 3.),
+                    ),
+                ),
+                note_indicator: NoteIndicator(7),
             )
         ),
     ],

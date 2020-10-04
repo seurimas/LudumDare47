@@ -20,16 +20,17 @@ const TILE_SIZE: u32 = 32;
 const TILE_CENTER: (u32, u32) = (0, 8);
 const FLOOR_TILE: usize = 0;
 const STAGE_SIZE: (f32, f32) = (
-    TILE_SIZE as f32 * 5.,
+    TILE_SIZE as f32 * 5., // 160
     100. + // Dropsize
-    TILE_SIZE as f32 * 2.5,
+    24. + // Low board
+    TILE_SIZE as f32 * 2.5, // 204
 );
 
 pub fn initialize_camera(world: &mut World, dimensions: &ScreenDimensions) -> Entity {
     let mut transform = Transform::default();
     transform.set_translation_xyz(
         STAGE_SIZE.0 / 2. - TILE_SIZE as f32 / 2.0,
-        STAGE_SIZE.1 / 2. - TILE_SIZE as f32 / 2.0,
+        STAGE_SIZE.1 / 2. - TILE_SIZE as f32 / 2.0 - 24.,
         200.,
     );
 
@@ -91,7 +92,6 @@ pub struct StageDescription {
     width: u32,
     height: u32,
     player_spawn: (u32, u32),
-    song: Song,
 }
 
 #[derive(Debug, Clone)]
@@ -99,6 +99,9 @@ pub struct StageState {
     platforms: HashMap<(u32, u32), Entity>,
     time_in_song: f32,
     missed: i32,
+    pub notes_found: Vec<Note>,
+    pub winning: bool,
+    song: Song,
 }
 
 impl Default for StageState {
@@ -107,6 +110,9 @@ impl Default for StageState {
             platforms: HashMap::new(),
             time_in_song: -4.0,
             missed: 0,
+            notes_found: Vec::new(),
+            winning: false,
+            song: Song::default(),
         }
     }
 }
@@ -135,6 +141,14 @@ impl StageState {
         };
         self.platforms.get(&(x, y))
     }
+
+    pub fn win(&mut self) {
+        self.song = Song::payout_song(&self.notes_found);
+        self.time_in_song = -0.5;
+        self.missed = 0;
+        self.notes_found = Vec::new();
+        self.winning = true;
+    }
 }
 
 impl Default for StageDescription {
@@ -143,13 +157,12 @@ impl Default for StageDescription {
             width: 5,
             height: 4,
             player_spawn: (0, 0),
-            song: Song::default(),
         }
     }
 }
 
 fn note_at(x: u32, y: u32) -> Note {
-    (x + y * 4) as Note
+    (x + y * 5) as Note
 }
 
 fn spawn_flags(world: &mut World) {
@@ -247,6 +260,9 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
         platforms,
         time_in_song: -4.0,
         missed: 0,
+        notes_found: Vec::new(),
+        winning: false,
+        song: Song::default(),
     });
 }
 
@@ -314,7 +330,9 @@ impl<'s> System<'s> for PlatformAnimationSystem {
                     sound.play_normal(|store| &store.tap);
                 } else if platform.has_player {
                     sound.play_normal(|store| &store.miss);
-                    stage_state.missed += 1;
+                    if !stage_state.winning {
+                        stage_state.missed += 1;
+                    }
                 } else {
                     sound.play_normal(|store| {
                         store
@@ -435,15 +453,14 @@ impl<'s> System<'s> for PlatformBeatSystem {
         &mut self,
         (mut platforms, parents, transforms, stage_desc, mut stage_state, time, spawner, sound): Self::SystemData,
     ) {
-        let song = &stage_desc.song;
         let last_time = stage_state.time_in_song;
         stage_state.time_in_song += time.delta_seconds();
-        let last_beat = last_time * ((song.bpm as f32) / 60.0);
-        let new_beat = last_beat + (time.delta_seconds() * (song.bpm as f32) / 60.0);
+        let last_beat = last_time * ((stage_state.song.bpm as f32) / 60.0);
+        let new_beat = last_beat + (time.delta_seconds() * (stage_state.song.bpm as f32) / 60.0);
         let last_sub_beat = (last_beat * SUBNOTES as f32) as i32;
         let new_sub_beat = (new_beat * SUBNOTES as f32) as i32;
         if new_sub_beat > last_sub_beat && new_sub_beat >= 0 {
-            for note in song.get_notes_at(new_sub_beat) {
+            for note in stage_state.song.get_notes_at(new_sub_beat) {
                 for (platform, entity) in (&platforms, &spawner.entities).join() {
                     if platform.note as usize == note {
                         let mut ball_transform = Transform::default();
@@ -473,27 +490,39 @@ impl<'s> System<'s> for PlatformBeatSystem {
                         );
                     }
                 }
+                if stage_state.winning {
+                    stage_state
+                        .notes_found
+                        .retain(|found_note| *found_note != note);
+                }
             }
-            for note in song.get_rewards_at(new_sub_beat) {
-                for (platform, entity) in (&platforms, &spawner.entities).join() {
-                    if platform.note as usize == note {
-                        let mut note_transform = Transform::default();
-                        if let Some(transform) = parents
-                            .get(entity)
-                            .and_then(|parent| transforms.get(parent.entity))
-                        {
-                            note_transform.set_translation_xyz(
-                                transform.translation().x,
-                                transform.translation().y,
-                                transform.translation().z + 0.01,
+            if !stage_state.winning {
+                for note in stage_state
+                    .song
+                    .get_rewards_at(new_sub_beat, &stage_state.notes_found)
+                {
+                    for (platform, entity) in (&platforms, &spawner.entities).join() {
+                        if platform.note as usize == note {
+                            let mut note_transform = Transform::default();
+                            if let Some(transform) = parents
+                                .get(entity)
+                                .and_then(|parent| transforms.get(parent.entity))
+                            {
+                                note_transform.set_translation_xyz(
+                                    transform.translation().x,
+                                    transform.translation().y,
+                                    transform.translation().z + 0.01,
+                                );
+                            }
+                            spawner.spawn_prefab(
+                                |prefabs| &prefabs.notes,
+                                move |builder| {
+                                    builder
+                                        .with(note_transform)
+                                        .with(NotePickup::new(entity, note))
+                                },
                             );
                         }
-                        spawner.spawn_prefab(
-                            |prefabs| &prefabs.notes,
-                            move |builder| {
-                                builder.with(note_transform).with(NotePickup::new(entity))
-                            },
-                        );
                     }
                 }
             }
@@ -515,7 +544,20 @@ impl<'a, 'b> SystemBundle<'a, 'b> for StageBundle {
         dispatcher.add(NoteAnimationSystem, "note_animation", &[]);
         dispatcher.add(NotePickupSystem, "note_pickup", &[]);
         dispatcher.add(PlayerMissSystem, "player_miss", &[]);
+        dispatcher.add(PlayerNoteIndicatorSystem, "player_notes", &[]);
+        dispatcher.add(PlayerWinSystem, "player_win", &[]);
         Ok(())
+    }
+}
+
+struct PlayerWinSystem;
+impl<'s> System<'s> for PlayerWinSystem {
+    type SystemData = (Write<'s, StageState>, SoundPlayer<'s>);
+
+    fn run(&mut self, (mut stage_state, sound): Self::SystemData) {
+        if stage_state.notes_found.len() == 8 {
+            stage_state.win();
+        }
     }
 }
 
@@ -542,6 +584,39 @@ impl<'s> System<'s> for PlayerMissSystem {
             } else {
                 println!("Off {}", stage_state.missed);
                 sprite.sprite_number = 4;
+            }
+        }
+    }
+}
+
+#[derive(Component, Debug, PrefabData, Clone, Deserialize, Serialize)]
+#[prefab(Component)]
+#[storage(VecStorage)]
+pub struct NoteIndicator(i32);
+
+struct PlayerNoteIndicatorSystem;
+impl<'s> System<'s> for PlayerNoteIndicatorSystem {
+    type SystemData = (
+        ReadStorage<'s, NoteIndicator>,
+        WriteStorage<'s, Tint>,
+        Write<'s, StageState>,
+        Entities<'s>,
+        SoundPlayer<'s>,
+    );
+
+    fn run(
+        &mut self,
+        (note_indicators, mut tints, stage_state, entities, sound): Self::SystemData,
+    ) {
+        for (note_indicator, entity) in (&note_indicators, &entities).join() {
+            if note_indicator.0 < stage_state.notes_found.len() as i32 {
+                let note = stage_state
+                    .notes_found
+                    .get(note_indicator.0 as usize)
+                    .expect("Missing note indicator");
+                tints.insert(entity, Tint(note_color(*note)));
+            } else {
+                tints.insert(entity, Tint(black()));
             }
         }
     }

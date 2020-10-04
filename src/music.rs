@@ -9,6 +9,7 @@ pub struct Song {
     pub bpm: i32,
     pub structures: Vec<Substructure>,
     pub payouts: Vec<Substructure>,
+    pub next_notes: Vec<Note>,
 }
 
 impl Song {
@@ -19,12 +20,24 @@ impl Song {
         }
         notes
     }
-    pub fn get_rewards_at(&self, beat: i32) -> Vec<Note> {
+    pub fn get_rewards_at(&self, beat: i32, paid_out: &Vec<Note>) -> Vec<Note> {
         let mut payouts = Vec::new();
         for payout in self.payouts.iter() {
             payouts.append(&mut payout.get_notes_at(beat));
         }
+        payouts.retain(|note| !paid_out.contains(note));
         payouts
+    }
+    pub fn payout_song(notes: &Vec<Note>) -> Self {
+        Song {
+            bpm: 300,
+            structures: vec![Substructure::Scale {
+                notes: notes.clone(),
+                interval: 4,
+            }],
+            payouts: vec![],
+            next_notes: vec![],
+        }
     }
 }
 
@@ -33,7 +46,8 @@ impl Default for Song {
         Song {
             bpm: 48,
             structures: vec![Substructure::row_your_boat()],
-            payouts: vec![Substructure::random()],
+            payouts: vec![Substructure::reward_row_row()],
+            next_notes: vec![C4, D4, E4, F4, G4, A4, B4, C5],
         }
     }
 }
@@ -47,10 +61,9 @@ pub enum Substructure {
         restart_at: i32,
         pitch_up: usize,
     },
-    Random {
+    Scale {
         notes: Vec<Note>,
         interval: i32,
-        chance: f32,
     },
 }
 
@@ -104,11 +117,31 @@ impl Substructure {
         }
     }
 
-    fn random() -> Self {
-        Substructure::Random {
-            notes: vec![C4, D4, E4, F4, G4, A4, B4, C5, D5, G5],
-            interval: 12,
-            chance: 1.,
+    fn reward_row_row() -> Self {
+        let mut notes = HashMap::new();
+        let progression = [
+            (6, G4),
+            (12, B4),
+            (18, A4),
+            (24, C4),
+            (30, F4),
+            (36, D4),
+            (42, E4),
+            (48, C5),
+        ];
+        for (beat, note) in progression.iter() {
+            notes.insert(*beat, *note);
+        }
+        let rounds = 1;
+        let repeat_at = 57;
+        let restart_at = 57;
+        let pitch_up = 0;
+        Substructure::Round {
+            notes,
+            rounds,
+            repeat_at,
+            pitch_up,
+            restart_at,
         }
     }
 
@@ -131,13 +164,11 @@ impl Substructure {
                 }
                 notes_at
             }
-            Substructure::Random {
-                notes,
-                interval,
-                chance,
-            } => {
-                if (beat % interval) == 0 && rand_chance(*chance) {
-                    vec![*rand_in(notes)]
+            Substructure::Scale { notes, interval } => {
+                if beat % interval == 0 && (beat / interval) < (notes.len() as i32) {
+                    vec![*notes
+                        .get((beat / interval) as usize)
+                        .expect("Missing scale note")]
                 } else {
                     vec![]
                 }

@@ -192,6 +192,10 @@ pub fn rand_color() -> Srgba {
     .into()
 }
 
+pub fn black() -> Srgba {
+    Hsl::new(RgbHue::from_radians(0.0), 1., 0.).into()
+}
+
 pub fn rand_upto(max: usize) -> usize {
     thread_rng().gen_range(0, max)
 }

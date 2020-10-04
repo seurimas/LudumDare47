@@ -1,4 +1,4 @@
-use crate::stage::MissIndicator;
+use crate::stage::{MissIndicator, NoteIndicator};
 use amethyst::{
     animation::*,
     assets::*,
@@ -23,6 +23,7 @@ pub struct SpriteEntityPrefabData {
     animation_set: Option<AnimationSetPrefab<AnimationId, SpriteRender>>,
     transform_animation_set: Option<AnimationSetPrefab<AnimationId, Transform>>,
     miss_indicator: Option<MissIndicator>,
+    note_indicator: Option<NoteIndicator>,
 }
 
 pub fn load_prefab<'a>(

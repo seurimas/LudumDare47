@@ -6,13 +6,15 @@ use amethyst::renderer::{palette::Srgba, resources::Tint};
 pub struct NotePickup {
     color: Option<Srgba>,
     platform: Entity,
+    value: Note,
 }
 
 impl NotePickup {
-    pub fn new(platform: Entity) -> Self {
+    pub fn new(platform: Entity, value: Note) -> Self {
         NotePickup {
             color: None,
             platform,
+            value,
         }
     }
 }
@@ -22,13 +24,15 @@ impl<'s> System<'s> for NotePickupSystem {
     type SystemData = (
         WriteStorage<'s, NotePickup>,
         WriteStorage<'s, Player>,
+        Write<'s, StageState>,
         Entities<'s>,
     );
-    fn run(&mut self, (notes, players, entities): Self::SystemData) {
+    fn run(&mut self, (notes, players, mut stage_state, entities): Self::SystemData) {
         for (note, note_entity) in (&notes, &entities).join() {
             for (player) in (&players).join() {
                 if Some(note.platform) == player.platform && !player.state.is_airborne() {
                     entities.delete(note_entity);
+                    stage_state.notes_found.push(note.value);
                 }
             }
         }
@@ -71,7 +75,7 @@ impl<'s> System<'s> for NoteAnimationSystem {
                 }
             }
             if note.color.is_none() {
-                let color = rand_color();
+                let color = note_color(note.value);
                 note.color = Some(color);
                 tints.insert(entity, Tint(color));
                 sprite.sprite_number = rand_upto(3);
