@@ -1,4 +1,4 @@
 (
   title: "Protect The Source",
-  dimensions: Some((800, 600)),
+  dimensions: Some((640, 800)),
 )

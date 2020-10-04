@@ -1,0 +1,166 @@
+#![enable(implicit_some)]
+/*!
+    @import /amethyst_assets/src/prefab/mod.rs#Prefab
+    @import ../src/assets.rs#SpriteEntityPrefabData
+    Prefab<SpriteEntityPrefabData>
+*/
+
+/*
+Backdrop
+*/
+Prefab(
+    entities: [
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    sheet: Sheet(
+                        texture: File("Master.png", (
+                            "IMAGE", (
+                                sampler_info: (
+                                    min_filter: Nearest,
+                                    mag_filter: Nearest,
+                                    mip_filter: Nearest,
+                                    wrap_mode: (Tile, Tile, Tile),
+                                    lod_bias: (0),
+                                    lod_range: (
+                                        start: ( 0 ),
+                                        end: ( 8000 ),
+                                    ),
+                                    comparison: None,
+                                    border: (0),
+                                    anisotropic: Off,
+				                    normalized: true,
+                                ),
+                            ),
+                        )),
+                        sprites: [
+                            List((
+                                    texture_width: 256,
+                                    texture_height: 256,
+                                    sprites: [
+                                        (
+                                            x: 0,
+                                            y: 80,
+                                            height: 32,
+                                            width: 32,
+                                        ),
+                                        (
+                                            x: 32,
+                                            y: 80,
+                                            height: 128,
+                                            width: 32,
+                                        ),
+                                        (
+                                            x: 64,
+                                            y: 80,
+                                            height: 16,
+                                            width: 160,
+                                        ),
+                                        (
+                                            x: 64,
+                                            y: 96,
+                                            height: 16,
+                                            width: 160,
+                                        ),
+                                    ],
+                                )),
+                        ],
+                        name: "backdrop",
+                    ),
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 1,
+                    ),
+                    transform: (
+                        translation: (0.0, 100., -200.0),
+                    ),
+                )
+
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 1,
+                    ),
+                    transform: (
+                        translation: (32., 100., -200.),
+                    ),
+                )
+
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 1,
+                    ),
+                    transform: (
+                        translation: (64., 100., -200.),
+                    ),
+                )
+
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 1,
+                    ),
+                    transform: (
+                        translation: (96., 100., -200.),
+                    ),
+                )
+
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 1,
+                    ),
+                    transform: (
+                        translation: (128., 100., -200.),
+                    ),
+                )
+
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 2,
+                    ),
+                    transform: (
+                        translation: (64., 156., -80.),
+                    ),
+                )
+
+            )
+        ),
+        PrefabEntity(
+            data: SpriteEntityPrefabData(
+                sprite_scene: (
+                    render: (
+                        sheet: "backdrop",
+                        sprite_number: 3,
+                    ),
+                    transform: (
+                        translation: (64., 156., -80.),
+                    ),
+                )
+
+            )
+        ),
+    ],
+)

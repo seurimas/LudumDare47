@@ -177,7 +177,7 @@ impl SimpleState for LoadingState {
         init_output(data.world);
         let mut progress_counter = ProgressCounter::new();
 
-        let tiles = load_spritesheet(data.world, "Tiles".to_string(), &mut progress_counter);
+        let master = load_spritesheet(data.world, "Master".to_string(), &mut progress_counter);
 
         let player = load_prefab(data.world, "Player.ron".to_string(), &mut progress_counter);
         let notes = load_prefab(data.world, "Notes.ron".to_string(), &mut progress_counter);
@@ -188,6 +188,11 @@ impl SimpleState for LoadingState {
         );
         let shadow = load_prefab(data.world, "Shadow.ron".to_string(), &mut progress_counter);
         let platform = load_prefab(data.world, "Drops.ron".to_string(), &mut progress_counter);
+        let backdrop = load_prefab(
+            data.world,
+            "Backdrop.ron".to_string(),
+            &mut progress_counter,
+        );
 
         let jump = load_sound_file(data.world, "hup.wav".to_string(), &mut progress_counter);
         let tap = load_sound_file(data.world, "tap.wav".to_string(), &mut progress_counter);
@@ -205,13 +210,14 @@ impl SimpleState for LoadingState {
 
         self.progress = Some(progress_counter);
         self.assets = Some((
-            SpriteStorage { tiles },
+            SpriteStorage { master },
             PrefabStorage {
                 ball,
                 shadow,
                 notes,
                 platform,
                 player,
+                backdrop,
             },
             SoundStorage {
                 jump,

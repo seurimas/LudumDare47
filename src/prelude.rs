@@ -1,6 +1,7 @@
 pub use crate::assets::{
     AnimationId, PrefabStorage, SoundStorage, SpriteEntityPrefabData, SpriteStorage, NOTE_COUNT,
 };
+pub use crate::music::Note;
 pub use crate::player::Player;
 pub use crate::stage::{Platform, StageState};
 pub use amethyst::{
@@ -17,6 +18,7 @@ pub use amethyst::{
         debug_drawing::DebugLines,
         palette::{Hsl, RgbHue, Srgba},
         plugins::{RenderDebugLines, RenderFlat2D, RenderToWindow},
+        resources::Tint,
         sprite::SpriteSheetHandle,
         types::{DefaultBackend, Texture},
         ImageFormat, SpriteRender, SpriteSheet, SpriteSheetFormat,
@@ -85,14 +87,36 @@ impl<'a> SoundPlayer<'a> {
 
 #[derive(SystemData)]
 pub struct PrefabSpawner<'a> {
+    sprites: Option<Read<'a, SpriteStorage>>,
     prefabs: Option<Read<'a, PrefabStorage>>,
     lazy: Read<'a, LazyUpdate>,
     pub entities: Entities<'a>,
 }
 
 impl<'a> PrefabSpawner<'a> {
-    pub fn spawn(&self, modify: impl FnOnce(LazyBuilder) -> LazyBuilder) -> Entity {
-        modify(self.lazy.create_entity(&self.entities)).build()
+    pub fn spawn_decor(
+        &self,
+        transform: Transform,
+        get_sprite: impl Fn(&SpriteStorage) -> &SpriteSheetHandle,
+        sprite_number: usize,
+        modify: impl FnOnce(LazyBuilder) -> LazyBuilder,
+    ) -> Option<Entity> {
+        if let Some(sprites) = &self.sprites {
+            Some(
+                modify(
+                    self.lazy
+                        .create_entity(&self.entities)
+                        .with(transform)
+                        .with(SpriteRender::new(
+                            get_sprite(sprites).clone(),
+                            sprite_number,
+                        )),
+                )
+                .build(),
+            )
+        } else {
+            None
+        }
     }
 
     pub fn spawn_prefab(
@@ -145,6 +169,15 @@ pub fn lerp(progress: f32, v1: f32, v2: f32) -> f32 {
 pub fn rand_in<T>(vec: &Vec<T>) -> &T {
     vec.get(thread_rng().gen_range(0, vec.len()))
         .expect("Nothing in vector")
+}
+
+pub fn note_color(note: Note) -> Srgba {
+    Hsl::new(
+        RgbHue::from_degrees(360.0 / (NOTE_COUNT as f32) * (note as f32)),
+        1.,
+        0.5,
+    )
+    .into()
 }
 
 pub fn rand_color() -> Srgba {

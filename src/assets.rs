@@ -41,6 +41,7 @@ pub struct PrefabStorage {
     pub ball: Handle<Prefab<SpriteEntityPrefabData>>,
     pub shadow: Handle<Prefab<SpriteEntityPrefabData>>,
     pub platform: Handle<Prefab<SpriteEntityPrefabData>>,
+    pub backdrop: Handle<Prefab<SpriteEntityPrefabData>>,
 }
 
 pub fn load_sound_file<'a>(
@@ -79,7 +80,7 @@ pub fn load_spritesheet<'a>(
 
 #[derive(Clone)]
 pub struct SpriteStorage {
-    pub tiles: SpriteSheetHandle,
+    pub master: SpriteSheetHandle,
 }
 
 pub const NOTE_COUNT: usize = 20;

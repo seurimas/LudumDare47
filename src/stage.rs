@@ -19,21 +19,26 @@ use std::collections::HashMap;
 const TILE_SIZE: u32 = 32;
 const TILE_CENTER: (u32, u32) = (0, 8);
 const FLOOR_TILE: usize = 0;
+const STAGE_SIZE: (f32, f32) = (
+    TILE_SIZE as f32 * 5.,
+    100. + // Dropsize
+    TILE_SIZE as f32 * 2.5,
+);
 
 pub fn initialize_camera(world: &mut World, dimensions: &ScreenDimensions) -> Entity {
-    // Setup camera in a way that our screen covers whole arena and (0, 0) is in the bottom left.
     let mut transform = Transform::default();
-    transform.set_translation_xyz(0.0, 0.0, 2.);
+    transform.set_translation_xyz(
+        STAGE_SIZE.0 / 2. - TILE_SIZE as f32 / 2.0,
+        STAGE_SIZE.1 / 2. - TILE_SIZE as f32 / 2.0,
+        200.,
+    );
 
     let entities = world.entities();
     let update = world.write_resource::<LazyUpdate>();
     let builder = update.create_entity(&entities);
 
     builder
-        .with(Camera::standard_2d(
-            dimensions.width() / 2.0,
-            dimensions.height() / 2.0,
-        ))
+        .with(Camera::standard_2d(STAGE_SIZE.0, STAGE_SIZE.1))
         .with(transform)
         .build()
 }
@@ -44,7 +49,7 @@ pub struct Platform {
     pub x: u32,
     pub y: u32,
     pub has_player: bool,
-    pub note: u32,
+    pub note: Note,
 }
 
 #[derive(Component, Debug, Copy, Clone)]
@@ -141,13 +146,62 @@ impl Default for StageDescription {
     }
 }
 
+fn note_at(x: u32, y: u32) -> Note {
+    (x + y * 4) as Note
+}
+
+fn spawn_flags(world: &mut World) {
+    let mut transform = Transform::default();
+    transform.set_translation_xyz(
+        (3 * TILE_SIZE) as f32,
+        (3 * TILE_SIZE / 2) as f32 + 100.0,
+        0.0,
+    );
+    world.exec(|spawner: PrefabSpawner| {
+        spawner.spawn_decor(transform, |sprites| &sprites.master, 2, |builder| builder)
+    });
+}
+
+fn spawn_backdrop(world: &mut World, x: u32) {
+    let mut transform = Transform::default();
+    transform.set_translation_xyz(
+        (x * TILE_SIZE) as f32,
+        (2 * TILE_SIZE / 2) as f32 + 100.0,
+        -200.0,
+    );
+    world.exec(|spawner: PrefabSpawner| {
+        spawner.spawn_decor(transform, |sprites| &sprites.master, 1, |builder| builder)
+    });
+}
+
+fn spawn_chute(world: &mut World, x: u32, y: u32) {
+    let mut transform = Transform::default();
+    transform.set_translation_xyz(
+        (x * TILE_SIZE) as f32,
+        (y * TILE_SIZE / 2) as f32 + 100.0,
+        y as f32 / 10.0 - 100.0,
+    );
+    world.exec(|spawner: PrefabSpawner| {
+        spawner.spawn_decor(
+            transform,
+            |sprites| &sprites.master,
+            0,
+            |builder| builder.with(Tint(note_color(note_at(x, y)))),
+        )
+    });
+}
+
 pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
-    let tile_spritesheet = {
-        let sprites = world.read_resource::<SpriteStorage>();
-        sprites.tiles.clone()
-    };
     let mut platforms = HashMap::new();
     if let Some((player_spawn, translation)) = {
+        world.exec(|spawner: PrefabSpawner| {
+            spawner.spawn_prefab(|prefabs| &prefabs.backdrop, |builder| builder);
+        });
+        for x in 0..stage_desc.width {
+            for y in 0..stage_desc.height {
+                spawn_chute(world, x, y);
+            }
+        }
         let mut player_spawn_and_loc = None;
         let entities = world.entities();
         let update = world.write_resource::<LazyUpdate>();
@@ -173,7 +227,7 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
                         x,
                         y,
                         has_player: false,
-                        note: x + y * 4,
+                        note: note_at(x, y) as Note,
                     })
                     .build();
                 if stage_desc.player_spawn.0 == x && stage_desc.player_spawn.1 == y {
