@@ -7,14 +7,16 @@ pub struct NotePickup {
     color: Option<Srgba>,
     platform: Entity,
     value: Note,
+    ttl: f32,
 }
 
 impl NotePickup {
-    pub fn new(platform: Entity, value: Note) -> Self {
+    pub fn new(platform: Entity, value: Note, ttl: f32) -> Self {
         NotePickup {
             color: None,
             platform,
             value,
+            ttl,
         }
     }
 }
@@ -26,14 +28,19 @@ impl<'s> System<'s> for NotePickupSystem {
         WriteStorage<'s, Player>,
         Write<'s, StageState>,
         Entities<'s>,
+        Read<'s, Time>,
     );
-    fn run(&mut self, (notes, players, mut stage_state, entities): Self::SystemData) {
-        for (note, note_entity) in (&notes, &entities).join() {
+    fn run(&mut self, (mut notes, players, mut stage_state, entities, time): Self::SystemData) {
+        for (mut note, note_entity) in (&mut notes, &entities).join() {
             for (player) in (&players).join() {
                 if Some(note.platform) == player.platform && !player.state.is_airborne() {
                     entities.delete(note_entity);
                     stage_state.notes_found.push(note.value);
                 }
+            }
+            note.ttl -= time.delta_seconds();
+            if note.ttl < 0.0 {
+                entities.delete(note_entity);
             }
         }
     }

@@ -112,7 +112,7 @@ impl Default for StageState {
             missed: 0,
             notes_found: Vec::new(),
             winning: false,
-            song: Song::default(),
+            song: Song::alouette(),
         }
     }
 }
@@ -262,7 +262,7 @@ pub fn initialize_stage(world: &mut World, stage_desc: StageDescription) {
         missed: 0,
         notes_found: Vec::new(),
         winning: false,
-        song: Song::default(),
+        song: Song::alouette(),
     });
 }
 
@@ -519,7 +519,7 @@ impl<'s> System<'s> for PlatformBeatSystem {
                                 move |builder| {
                                     builder
                                         .with(note_transform)
-                                        .with(NotePickup::new(entity, note))
+                                        .with(NotePickup::new(entity, note, 5.))
                                 },
                             );
                         }

@@ -41,12 +41,20 @@ impl Song {
     }
 }
 
-impl Default for Song {
-    fn default() -> Self {
+impl Song {
+    pub fn row_your_boat() -> Self {
         Song {
             bpm: 48,
             structures: vec![Substructure::row_your_boat()],
             payouts: vec![Substructure::reward_row_row()],
+            next_notes: vec![C4, D4, E4, F4, G4, A4, B4, C5],
+        }
+    }
+    pub fn alouette() -> Self {
+        Song {
+            bpm: 120,
+            structures: vec![Substructure::alouette()],
+            payouts: vec![Substructure::reward_alouette()],
             next_notes: vec![C4, D4, E4, F4, G4, A4, B4, C5],
         }
     }
@@ -116,17 +124,93 @@ impl Substructure {
             restart_at,
         }
     }
+    fn alouette() -> Self {
+        let mut notes = HashMap::new();
+        // C D E F G A B  C  D  E  F  G
+        // 0 2 4 5 7 9 11 12 14 16 17 19
+        let progression = [
+            // Measure 1
+            (0, F4),  // A
+            (6, G4),  // lou
+            (8, A4),  // et
+            (12, A4), // te
+            // Measure 2
+            (16, G4), // gen
+            (18, F4), // tille
+            (20, G4), // A
+            (22, A4), // lou
+            (24, F4), // et
+            (28, C4), // te
+            // Measure 3
+            (32, F4), // A
+            (38, G4), // lou
+            (40, A4), // et
+            (44, A4), // te
+            // Measure 4
+            (48, G4), // je
+            (50, F4), // te
+            (52, G4), // plu
+            (54, A4), // mer
+            (56, F4), // ai
+            // Measure 5
+            (64, F4), // je
+            (66, E4), // te
+            (68, F4), // plu
+            (70, E4), // mer
+            (72, F4), // ai
+            (74, A4), // la
+            (76, C5), // tete
+            // Measure 6
+            (80, C5),     // je
+            (82, D5),     // te
+            (84, C5),     // plu
+            (86, B4 + 1), // mer
+            (88, A4),     // ai
+            (90, G4),     // la
+            (92, F4),     // tete
+            // Measure 7
+            (96, C5),  // Et
+            (98, C5),  // le
+            (100, C5), // tete
+            (104, C4), // Et
+            (106, C4), // la
+            (108, C4), // tete
+            // Measure 8
+            (112, C5), // Oh
+            (114, C5), // Oh
+            (116, C5), // Oh
+            (118, C5), // Oh
+            (120, C5), // Oh
+            (122, C5), // Oh
+            (124, C5), // Oh
+            (126, C5), // Oh
+        ];
+        for (beat, note) in progression.iter() {
+            notes.insert(*beat, *note);
+        }
+        let rounds = 2;
+        let repeat_at = 64;
+        let restart_at = 128 + 64;
+        let pitch_up = 0;
+        Substructure::Round {
+            notes,
+            rounds,
+            repeat_at,
+            pitch_up,
+            restart_at,
+        }
+    }
 
     fn reward_row_row() -> Self {
         let mut notes = HashMap::new();
         let progression = [
-            (6, G4),
-            (12, B4),
-            (18, A4),
-            (24, C4),
-            (30, F4),
-            (36, D4),
-            (42, E4),
+            (6, C4),
+            (12, D4),
+            (18, E4),
+            (24, F4),
+            (30, G4),
+            (36, A4),
+            (42, B4),
             (48, C5),
         ];
         for (beat, note) in progression.iter() {
@@ -135,6 +219,34 @@ impl Substructure {
         let rounds = 1;
         let repeat_at = 57;
         let restart_at = 57;
+        let pitch_up = 0;
+        Substructure::Round {
+            notes,
+            rounds,
+            repeat_at,
+            pitch_up,
+            restart_at,
+        }
+    }
+
+    fn reward_alouette() -> Self {
+        let mut notes = HashMap::new();
+        let progression = [
+            (16, C4),
+            (48, D4),
+            (64, E4),
+            (80, F4),
+            (96, G4),
+            (128, A4),
+            (144, B4),
+            (160, C5),
+        ];
+        for (beat, note) in progression.iter() {
+            notes.insert(*beat, *note);
+        }
+        let rounds = 1;
+        let repeat_at = 128 + 64;
+        let restart_at = 128 + 64;
         let pitch_up = 0;
         Substructure::Round {
             notes,
