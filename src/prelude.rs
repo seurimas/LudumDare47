@@ -1,8 +1,11 @@
-pub use crate::assets::{AnimationId, PrefabStorage, SoundStorage, SpriteStorage, NOTE_COUNT};
+pub use crate::assets::{
+    AnimationId, PrefabStorage, SoundStorage, SpriteEntityPrefabData, SpriteStorage, NOTE_COUNT,
+};
 pub use crate::player::Player;
 pub use crate::stage::{Platform, StageState};
 pub use amethyst::{
     animation::*,
+    assets::{Handle, Prefab},
     audio::{output::Output, Source, SourceHandle},
     core::{bundle::SystemBundle, timing::Time, Transform},
     ecs::world::LazyBuilder,
@@ -25,8 +28,8 @@ use amethyst::{
 };
 pub use rand::prelude::*;
 
-pub fn get_active_animation(
-    control_set: &AnimationControlSet<AnimationId, SpriteRender>,
+pub fn get_active_animation<T: amethyst::animation::AnimationSampling>(
+    control_set: &AnimationControlSet<AnimationId, T>,
 ) -> Option<AnimationId> {
     for (id, animation) in control_set.animations.iter() {
         if animation.state.is_running() {
@@ -76,6 +79,38 @@ impl<'a> SoundPlayer<'a> {
                     output.play_once(sound, 0.75);
                 }
             }
+        }
+    }
+}
+
+#[derive(SystemData)]
+pub struct PrefabSpawner<'a> {
+    prefabs: Option<Read<'a, PrefabStorage>>,
+    lazy: Read<'a, LazyUpdate>,
+    pub entities: Entities<'a>,
+}
+
+impl<'a> PrefabSpawner<'a> {
+    pub fn spawn(&self, modify: impl FnOnce(LazyBuilder) -> LazyBuilder) -> Entity {
+        modify(self.lazy.create_entity(&self.entities)).build()
+    }
+
+    pub fn spawn_prefab(
+        &self,
+        get_prefab: impl Fn(&PrefabStorage) -> &Handle<Prefab<SpriteEntityPrefabData>>,
+        modify: impl FnOnce(LazyBuilder) -> LazyBuilder,
+    ) -> Option<Entity> {
+        if let Some(prefabs) = &self.prefabs {
+            Some(
+                modify(
+                    self.lazy
+                        .create_entity(&self.entities)
+                        .with(get_prefab(&prefabs).clone()),
+                )
+                .build(),
+            )
+        } else {
+            None
         }
     }
 }

@@ -1,3 +1,4 @@
+#![allow(warnings)]
 extern crate nalgebra as na;
 extern crate nalgebra19 as na19;
 mod assets;
@@ -178,7 +179,12 @@ impl SimpleState for LoadingState {
         let tiles = load_spritesheet(data.world, "Tiles".to_string(), &mut progress_counter);
 
         let player = load_prefab(data.world, "Player.ron".to_string(), &mut progress_counter);
-        let shadows = load_prefab(data.world, "Shadow.ron".to_string(), &mut progress_counter);
+        let ball = load_prefab(
+            data.world,
+            "BallDrop.ron".to_string(),
+            &mut progress_counter,
+        );
+        let shadow = load_prefab(data.world, "Shadow.ron".to_string(), &mut progress_counter);
         let platform = load_prefab(data.world, "Drops.ron".to_string(), &mut progress_counter);
 
         let jump = load_sound_file(data.world, "hup.wav".to_string(), &mut progress_counter);
@@ -199,7 +205,8 @@ impl SimpleState for LoadingState {
         self.assets = Some((
             SpriteStorage { tiles },
             PrefabStorage {
-                shadows,
+                ball,
+                shadow,
                 platform,
                 player,
             },

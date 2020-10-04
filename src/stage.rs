@@ -22,7 +22,7 @@ const FLOOR_TILE: usize = 0;
 pub fn initialize_camera(world: &mut World, dimensions: &ScreenDimensions) -> Entity {
     // Setup camera in a way that our screen covers whole arena and (0, 0) is in the bottom left.
     let mut transform = Transform::default();
-    transform.set_translation_xyz(0.0, 0.0, 1.);
+    transform.set_translation_xyz(0.0, 0.0, 2.);
 
     let entities = world.entities();
     let update = world.write_resource::<LazyUpdate>();
@@ -52,6 +52,40 @@ pub struct Platform {
     pub y: u32,
     pub has_player: bool,
     pub note: u32,
+}
+
+#[derive(Component, Debug, Copy, Clone)]
+#[storage(VecStorage)]
+pub struct Ball {
+    ttl: f32,
+    ttd: f32,
+    drop_speed: f32,
+    hit: bool,
+    platform: Entity,
+}
+
+impl Ball {
+    fn new(platform: Entity) -> Self {
+        Ball {
+            ttl: 1.2,
+            ttd: 1.0,
+            drop_speed: 100.0,
+            hit: false,
+            platform,
+        }
+    }
+}
+
+#[derive(Component, Debug, Copy, Clone)]
+#[storage(VecStorage)]
+pub struct Shadow {
+    ttl: f32,
+}
+
+impl Default for Shadow {
+    fn default() -> Self {
+        Shadow { ttl: 1.0 }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -162,6 +196,8 @@ struct PlatformAnimationSystem;
 impl<'s> System<'s> for PlatformAnimationSystem {
     type SystemData = (
         ReadStorage<'s, Player>,
+        WriteStorage<'s, Shadow>,
+        WriteStorage<'s, Ball>,
         WriteStorage<'s, Platform>,
         ReadStorage<'s, AnimationSet<AnimationId, SpriteRender>>,
         WriteStorage<'s, AnimationControlSet<AnimationId, SpriteRender>>,
@@ -175,6 +211,8 @@ impl<'s> System<'s> for PlatformAnimationSystem {
         &mut self,
         (
             players,
+            mut shadows,
+            mut balls,
             mut platforms,
             animation_sets,
             mut control_sets,
@@ -192,20 +230,36 @@ impl<'s> System<'s> for PlatformAnimationSystem {
         )
             .join()
         {
-            let mut need_to_react = false;
+            let mut need_to_wobble = false;
             for (player) in (&players).join() {
                 if !platform.has_player
                     && player.platform == Some(entity)
                     && !player.state.is_airborne()
                 {
-                    need_to_react = true;
+                    need_to_wobble = true;
                     platform.has_player = true;
                 } else if platform.has_player && player.platform != Some(entity) {
                     platform.has_player = false;
                 }
             }
-            if need_to_react {
-                sound.play_normal(|store| &store.tap);
+            let mut need_to_play = false;
+            for (mut ball) in (&mut balls).join() {
+                if ball.platform == entity && !ball.hit && ball.ttd <= 0.0 {
+                    need_to_play = true;
+                    ball.hit = true;
+                }
+            }
+            if need_to_wobble || need_to_play {
+                if need_to_wobble {
+                    sound.play_normal(|store| &store.tap);
+                } else {
+                    sound.play_normal(|store| {
+                        store
+                            .foo_scale
+                            .get(platform.note as usize)
+                            .expect("Missing note")
+                    });
+                }
                 if let (Some(control_set), Some(t_control_set)) = (
                     get_animation_set(&mut control_sets, entity),
                     get_animation_set(&mut t_control_sets, entity),
@@ -230,20 +284,93 @@ impl<'s> System<'s> for PlatformAnimationSystem {
     }
 }
 
+struct BallDropperSystem;
+impl<'s> System<'s> for BallDropperSystem {
+    type SystemData = (
+        WriteStorage<'s, Ball>,
+        WriteStorage<'s, Shadow>,
+        WriteStorage<'s, Transform>,
+        ReadStorage<'s, AnimationSet<AnimationId, SpriteRender>>,
+        WriteStorage<'s, AnimationControlSet<AnimationId, SpriteRender>>,
+        ReadStorage<'s, AnimationSet<AnimationId, Transform>>,
+        WriteStorage<'s, AnimationControlSet<AnimationId, Transform>>,
+        Entities<'s>,
+        Read<'s, Time>,
+    );
+    fn run(
+        &mut self,
+        (
+            mut balls,
+            mut shadows,
+            mut transforms,
+            animation_sets,
+            mut control_sets,
+            t_animation_sets,
+            mut t_control_sets,
+            entities,
+            time,
+        ): Self::SystemData,
+    ) {
+        for (mut ball, animation_set, mut transform, entity) in
+            (&mut balls, &animation_sets, &mut transforms, &entities).join()
+        {
+            if let Some(control_set) = get_animation_set(&mut control_sets, entity) {
+                if get_active_animation(control_set).is_none() {
+                    set_active_animation(
+                        control_set,
+                        AnimationId::Idle,
+                        &animation_set,
+                        EndControl::Stay,
+                        1.0,
+                    );
+                }
+            }
+            if ball.ttd > 0.0 {
+                transform.translation_mut().y -= ball.drop_speed * time.delta_seconds();
+            }
+            ball.ttd -= time.delta_seconds();
+            ball.ttl -= time.delta_seconds();
+            if ball.ttl < 0.0 {
+                entities.delete(entity);
+            }
+        }
+        for (mut shadow, animation_set, entity) in (&mut shadows, &animation_sets, &entities).join()
+        {
+            if let Some(control_set) = get_animation_set(&mut control_sets, entity) {
+                if get_active_animation(control_set).is_none() {
+                    set_active_animation(
+                        control_set,
+                        AnimationId::Idle,
+                        &animation_set,
+                        EndControl::Stay,
+                        1.0,
+                    );
+                }
+            }
+            shadow.ttl -= time.delta_seconds();
+            if shadow.ttl < 0.0 {
+                entities.delete(entity);
+            }
+        }
+    }
+}
+
 struct PlatformBeatSystem;
 impl<'s> System<'s> for PlatformBeatSystem {
     type SystemData = (
         WriteStorage<'s, Platform>,
+        ReadStorage<'s, Parent>,
+        ReadStorage<'s, Transform>,
         Read<'s, StageDescription>,
         Write<'s, StageState>,
         Read<'s, Time>,
-        Entities<'s>,
+        PrefabSpawner<'s>,
         SoundPlayer<'s>,
     );
 
     fn run(
         &mut self,
-        (mut platforms, stage_desc, mut stage_state, time, entities, sound): Self::SystemData,
+        (mut platforms, parents, transforms, stage_desc, mut stage_state, time, spawner, sound): Self::SystemData,
     ) {
         let last_beat = stage_state.beat;
         let song = &stage_desc.song;
@@ -252,7 +379,35 @@ impl<'s> System<'s> for PlatformBeatSystem {
         let new_sub_beat = (new_beat * SUBNOTES as f32) as i32;
         if new_sub_beat > last_sub_beat {
             for note in song.get_notes_at(new_sub_beat) {
-                sound.play_normal(|store| &store.foo_scale.get(note).expect("Missing note!"));
+                for (platform, entity) in (&platforms, &spawner.entities).join() {
+                    if platform.note as usize == note {
+                        let mut ball_transform = Transform::default();
+                        let mut shadow_transform = Transform::default();
+                        if let Some(transform) = parents
+                            .get(entity)
+                            .and_then(|parent| transforms.get(parent.entity))
+                        {
+                            ball_transform.set_translation_xyz(
+                                transform.translation().x,
+                                transform.translation().y + 100.0,
+                                transform.translation().z + 0.01,
+                            );
+                            shadow_transform.set_translation_xyz(
+                                transform.translation().x,
+                                transform.translation().y,
+                                transform.translation().z + 0.01,
+                            );
+                        }
+                        spawner.spawn_prefab(
+                            |prefabs| &prefabs.shadow,
+                            move |builder| builder.with(shadow_transform).with(Shadow::default()),
+                        );
+                        spawner.spawn_prefab(
+                            |prefabs| &prefabs.ball,
+                            move |builder| builder.with(ball_transform).with(Ball::new(entity)),
+                        );
+                    }
+                }
             }
             println!("{}", new_sub_beat);
         }
@@ -270,6 +425,7 @@ impl<'a, 'b> SystemBundle<'a, 'b> for StageBundle {
     ) -> Result<(), Error> {
         dispatcher.add(PlatformAnimationSystem, "platform_animation", &[]);
         dispatcher.add(PlatformBeatSystem, "platform_beat", &[]);
+        dispatcher.add(BallDropperSystem, "ball_dropper", &[]);
         Ok(())
     }
 }
